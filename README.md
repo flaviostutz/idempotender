@@ -1,10 +1,8 @@
 # idempotender
 
-A Javascript library for idempotency control based on DynamoDB.
+Middy middleware for making AWS Lambda Functions imdepotent.
 
 Idempotency is the attribute of a function to be called multiple times with a certain input so the underlying state and the output stays the same as the first execution regardless of how many times the function was called with that input.
-
-It's important, for example, to avoid duplicate execution of payments, or to simplify scenarios where failures can be fixed with simple retries, without risking duplications and inconsistencies.
 
 Idempotender can be used to create this attribute to any function. You can use the library directly in any function, or you can use it as a Middy middleware.
 
@@ -30,17 +28,13 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: key
-          AttributeType: S
-        - AttributeName: lockExpiration
-          AttributeType: S
-        - AttributeName: output
+        - AttributeName: Id
           AttributeType: S
       KeySchema:
-        - AttributeName: key
+        - AttributeName: Id
           KeyType: HASH
       TimeToLiveSpecification:
-        AttributeName: executionExpiration
+        AttributeName: executionTTL
         Enabled: true
 ```
 
@@ -177,13 +171,16 @@ function myIdempotentFunction(param1: string, param2: string): string {
 
 ## Reference
 
+* These are the default values of the configuration
+
 ```js
 const idem = idempotender({
     dynamoDBTableName: 'IdempotencyExecutions',
     lockEnable: true,
-    lockTTL: 60,
+    lockTTL: 10,
+    lockRetryTimeout: 15,
     executionTTL: 24 * 3600,
-    keyJmespath: 'headers.["Idempotency-Key"]',
+    keyJmespath: null,
     keyMapper: null,
     keyHash: true
 }
@@ -211,7 +208,13 @@ const idem = idempotender({
 
     - Time in seconds that the concurrency lock will be active. During this timespan, if another request arrives, before the first request is finished, it will receive a status 419 (see lockEnable)
 
-    - Defaults to '60'
+    - Defaults to '10'
+
+  - **lockRetryTimeout**
+
+    - Time in seconds waiting for an existing lock to be released in case of concurrency. If the lock is released in this period, we will try to get the last saved output from the other process (if it was saved) and can return the previous output gracefully. If after lock is released and output was not saved, we will try to acquire the lock again.
+
+    - Defaults to '15'
 
   - **executionTTL**
 
