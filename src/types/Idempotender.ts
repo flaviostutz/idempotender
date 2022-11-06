@@ -1,7 +1,8 @@
 import { Execution } from './Execution';
 
 export interface Idempotender {
-    getExecution(input:any): Execution
-    deleteExecution(input:any): void
-    saveExecution(input:any, output:string): void
+    mapKey(input:any):string
+    getExecution(key:string): Execution
+    deleteExecution(key:string): void
+    saveExecution(key:string, output:string): void
 }

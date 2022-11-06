@@ -40,7 +40,7 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
   }
 
   return {
-    getExecution: (input:any):Execution => {
+    getExecution: (key:string):Execution => {
 
       // FIXME WHILE (inside lockRetryTimeout)
 
@@ -88,9 +88,13 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
         },
       };
     },
-    deleteExecution: (input:any):void => {
+    deleteExecution: (key:string):void => {
     },
-    saveExecution: (input:any, output:string):void => {
+    saveExecution: (key:string, output:string):void => {
+    },
+    mapKey: (input:any):string => {
+      //FIXME 
+      return JSON.stringify(input);
     },
   };
 

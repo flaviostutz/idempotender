@@ -250,7 +250,15 @@ const idem = idempotender({
 
     - Defaults to 'true'
 
-## Functions:
+## Functions
+
+- **mapKey(input:any)**
+
+  - Converts an arbitrary input data to the key used in database operations to identify this idempotent execution
+
+  - If a custom 'keyMapper' function is set, it will use this function to do the conversion
+
+  - If 'keyJmespath' is set, 'input' must be an object and the results of the jmespath query against this object will be used as the key
 
 - **saveExecution(key:string, output:string)**
 
