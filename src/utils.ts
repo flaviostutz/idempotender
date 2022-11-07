@@ -4,7 +4,7 @@ import { AttributeValue } from '@aws-sdk/client-dynamodb';
 import { ExecutionData } from './types/ExecutionData';
 import { ExecutionStatus } from './types/ExecutionStatus';
 
-const dynamoToExecutionData = (item:Record<string, AttributeValue>):ExecutionData => {
+const dynamoToExecutionData = (item: Record<string, AttributeValue>): ExecutionData => {
   return {
     key: item.Id.S || '',
     lockTTL: item.lockTTL.N ? parseInt(item.lockTTL.N, 10) : 0,
@@ -14,7 +14,7 @@ const dynamoToExecutionData = (item:Record<string, AttributeValue>):ExecutionDat
   };
 };
 
-const executionDataToDynamo = (executionData:ExecutionData):Record<string, AttributeValue> => {
+const executionDataToDynamo = (executionData: ExecutionData): Record<string, AttributeValue> => {
   return {
     Id: { S: executionData.key },
     lockTTL: { N: `${executionData.lockTTL}` },
@@ -24,7 +24,7 @@ const executionDataToDynamo = (executionData:ExecutionData):Record<string, Attri
   };
 };
 
-const getExecutionStatus = (executionData:ExecutionData | null):ExecutionStatus => {
+const getExecutionStatus = (executionData: ExecutionData | null): ExecutionStatus => {
   if (!executionData) {
     return ExecutionStatus.OPEN;
   }
@@ -48,7 +48,7 @@ const getExecutionStatus = (executionData:ExecutionData | null):ExecutionStatus 
   return ExecutionStatus.OPEN;
 };
 
-const sleep = async (ms:number):Promise<void> => {
+const sleep = async (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 

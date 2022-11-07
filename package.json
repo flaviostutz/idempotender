@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/flaviostutz/idempotender#readme",
   "devDependencies": {
+    "@shelf/jest-dynamodb": "^3.3.1",
     "@shopify/eslint-plugin": "^42.0.1",
     "@types/diff": "^5.0.2",
     "@types/jest": "^29.1.2",

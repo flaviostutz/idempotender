@@ -1,16 +1,26 @@
 /* eslint-disable id-length */
-import { PutItemCommand, DynamoDBClient, GetItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
+import {
+  PutItemCommand,
+  DynamoDBClient,
+  GetItemCommand,
+  DeleteItemCommand,
+} from '@aws-sdk/client-dynamodb';
 
 import { ExecutionData } from './types/ExecutionData';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
 import { dynamoToExecutionData, executionDataToDynamo } from './utils';
 
-const dynamodDBClient = new DynamoDBClient({});
+let dynamodDBClient = new DynamoDBClient({});
 
-const acquireLock = async (key:string, config:IdempotenderConfig):Promise<boolean> => {
+const lockAcquire = async (key: string, config: IdempotenderConfig): Promise<boolean> => {
   // put lockTTL=[date in future] with condition lockTTL==0
-  if (!config.executionTTL) { throw new Error('executionTTL shouldnt be null'); }
-  if (!config.lockTTL) { throw new Error('lockTTL shouldnt be null'); }
+  if (!config.executionTTL) {
+    throw new Error('executionTTL shouldnt be null');
+  }
+  if (!config.lockTTL) {
+    throw new Error('lockTTL shouldnt be null');
+  }
+  // prettier-ignore
   const executionData = {
     key,
     lockTTL: (new Date().getTime() / 1000.0) + config.lockTTL,
@@ -30,15 +40,18 @@ const acquireLock = async (key:string, config:IdempotenderConfig):Promise<boolea
   try {
     await dynamodDBClient.send(command);
     return true;
-  } catch (err:any) {
-    if (err.code !== 'ConditionalCheckFailedException') {
+  } catch (err: any) {
+    if (err.name !== 'ConditionalCheckFailedException') {
       throw err;
     }
     return false;
   }
 };
 
-const fetchExecution = async (key:string, config:IdempotenderConfig):Promise<ExecutionData | null> => {
+const fetchExecution = async (
+  key: string,
+  config: IdempotenderConfig,
+): Promise<ExecutionData | null> => {
   const command = new GetItemCommand({
     TableName: config.dynamoDBTableName,
     Key: { Id: { S: key } },
@@ -52,7 +65,7 @@ const fetchExecution = async (key:string, config:IdempotenderConfig):Promise<Exe
   return null;
 };
 
-const deleteExecution = async (key:string, config:IdempotenderConfig):Promise<void> => {
+const deleteExecution = async (key: string, config: IdempotenderConfig): Promise<void> => {
   const command = new DeleteItemCommand({
     TableName: config.dynamoDBTableName,
     Key: { Id: { S: key } },
@@ -61,11 +74,14 @@ const deleteExecution = async (key:string, config:IdempotenderConfig):Promise<vo
 };
 
 const completeExecution = async (
-  key:string,
-  output:string,
-  config:IdempotenderConfig,
-):Promise<void> => {
-  if (!config.executionTTL) { throw new Error('executionTTL should be defined'); }
+  key: string,
+  output: string,
+  config: IdempotenderConfig,
+): Promise<void> => {
+  if (!config.executionTTL) {
+    throw new Error('executionTTL should be defined');
+  }
+  // prettier-ignore
   const executionData = {
     key,
     lockTTL: 0,
@@ -80,4 +96,8 @@ const completeExecution = async (
   await dynamodDBClient.send(command);
 };
 
-export { acquireLock, fetchExecution, deleteExecution, completeExecution };
+const setDynamodDBClient = (ddbclient: DynamoDBClient): void => {
+  dynamodDBClient = ddbclient;
+};
+
+export { lockAcquire, fetchExecution, deleteExecution, completeExecution, setDynamodDBClient };

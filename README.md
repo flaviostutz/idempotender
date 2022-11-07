@@ -171,7 +171,7 @@ function myIdempotentFunction(param1: string, param2: string): string {
 
 ## Reference
 
-* These are the default values of the configuration
+- These are the default values of the configuration
 
 ```js
 const idem = idempotender({
