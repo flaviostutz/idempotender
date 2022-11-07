@@ -7,5 +7,6 @@ export type IdempotenderConfig = {
     executionTTL?: number,
     keyJmespath?: string | null,
     keyMapper?: KeyMapperFunction | null,
-    keyHash?: boolean
+    keyHash?: boolean,
+    lockAcquireTimeout: number
 }

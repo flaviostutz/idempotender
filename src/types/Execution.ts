@@ -1,6 +1,8 @@
-export interface Execution {
+export type Execution = {
+    statusOpen(): boolean
     statusLocked(): boolean
-    statusPending(): boolean
-    statusSaved(): boolean
+    statusCompleted(): boolean
     output(): string | null
+    cancel(): Promise<void>
+    complete(output:string): Promise<void>
 }

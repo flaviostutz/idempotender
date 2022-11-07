@@ -1,9 +1,12 @@
+
 import jmespath from 'jmespath';
 
 import { Execution } from './types/Execution';
 import { Idempotender } from './types/Idempotender';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
-
+import { getExecutionStatus, sleep } from './utils';
+import { ExecutionStatus } from './types/ExecutionStatus';
+import { deleteExecution, fetchExecution, acquireLock, completeExecution } from './db';
 
 const jmespathMapper = (query:string) => {
   return (input:any):string => {
@@ -19,6 +22,7 @@ const defaultConfig:IdempotenderConfig = {
   keyJmespath: null,
   keyMapper: null,
   keyHash: true,
+  lockAcquireTimeout: 10,
 };
 
 /**
@@ -40,64 +44,69 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
   }
 
   return {
-    getExecution: (key:string):Execution => {
+    getExecution: async (key:string):Promise<Execution> => {
 
-      // FIXME WHILE (inside lockRetryTimeout)
+      // determine status of execution
+      let status = ExecutionStatus.OPEN;
+      let lockAcquired = false;
+      let executionOutput:string;
 
-      // FIXME get execution
-      // if doesn't exist, not saved, or execution expired, acquire lock
-      // else return last output
-
-      // FIXME acquire write lock
-      // put lockTTL=[date in future] with condition lockTTL==0
-      // if cannot get lock, retry until "lockTimeout" for the lock to be released
+      // if cannot get lock, retry until "lockAcquireTimeout" for the lock to be released
       // (check if output saved or if you need to try to acquire a lock again)
-      // backoffTime=500ms; backoffRatio=2
-      // 500, 1000, 2000, 4000, 8000, 16000
+      const startTime = new Date().getTime();
+      const retryTimeoutMs = config1.lockAcquireTimeout * 1000;
+      let st = 500;
 
-      const execution = {
-        executionTTL: 123,
-        lockTTL: 123,
-        outputSaved: false,
-        outputData: '',
-      };
+      do {
+        const executionData = await fetchExecution(key, config1);
+        status = getExecutionStatus(executionData);
 
-      const nowEpoch = new Date().getTime() / 1000.0;
+        if (status === ExecutionStatus.COMPLETED) {
+          if (!executionData) { throw new Error('Shouldnt be COMPLETED if executionData is null'); }
+          executionOutput = executionData.outputValue;
+          break;
+        }
+
+        if (status === ExecutionStatus.OPEN) {
+          lockAcquired = await acquireLock(key, config1);
+          if (lockAcquired) {
+            break;
+          }
+        }
+
+        await sleep(st);
+        st *= 2; // 500, 1000, 2000, 4000, 8000, 16000
+      } while ((new Date().getTime() - startTime) < retryTimeoutMs);
 
       return {
+        statusOpen(): boolean {
+          return status === ExecutionStatus.OPEN;
+        },
         statusLocked(): boolean {
-          if (this.statusSaved() || !config1.lockEnable) {
-            return false;
-          }
-          return nowEpoch < execution.lockTTL;
+          return status === ExecutionStatus.LOCKED;
         },
-        statusPending(): boolean {
-          return !this.statusLocked() && !this.statusSaved();
-        },
-        statusSaved(): boolean {
-          if (execution.outputSaved) {
-            return nowEpoch < execution.executionTTL;
-          }
-          return false;
+        statusCompleted(): boolean {
+          return status === ExecutionStatus.COMPLETED;
         },
         output():string {
-          if (!this.statusSaved()) {
-            throw new Error('Cannot get output if status is not "saved"');
+          if (status !== ExecutionStatus.COMPLETED) {
+            throw new Error('Cannot get output if execution is not completed');
           }
-          return execution.outputData;
+          return executionOutput;
+        },
+        cancel: async ():Promise<void> => {
+          await deleteExecution(key, config1);
+        },
+        complete: async (output:string):Promise<void> => {
+          await completeExecution(key, output, config1);
         },
       };
     },
-    deleteExecution: (key:string):void => {
-    },
-    saveExecution: (key:string, output:string):void => {
-    },
     mapKey: (input:any):string => {
-      //FIXME 
-      return JSON.stringify(input);
+      if (!config1.keyMapper) { throw new Error('keyMapper shouldnt be null'); }
+      return config1.keyMapper(input);
     },
   };
-
 };
 
-export const idempotender;
+export default idempotender;

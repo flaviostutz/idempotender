@@ -38,6 +38,7 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.204.0",
     "@types/jmespath": "^0.15.0",
     "jmespath": "^0.16.0"
   }
