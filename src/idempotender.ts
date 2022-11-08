@@ -87,6 +87,11 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
           break;
         }
 
+        // skip lock acquire
+        if (!config1.lockEnable) {
+          break;
+        }
+
         if (status === ExecutionStatus.OPEN) {
           lockAcquired = await lockAcquire(key, config1);
           if (lockAcquired) {
@@ -119,6 +124,9 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
         },
         complete: async (output: string): Promise<void> => {
           await completeExecution(key, output, config1);
+          // if this instance is still used it has the "write through" state
+          status = ExecutionStatus.COMPLETED;
+          executionOutput = output;
         },
       };
     },

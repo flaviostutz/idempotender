@@ -4,7 +4,7 @@ import { setDynamodDBClient, deleteExecution } from './db';
 import { idempotender } from './idempotender';
 import { sleep } from './utils';
 
-describe('when using idempotender with default configurations', () => {
+describe('when using idempotender with custom configurations', () => {
 
   beforeAll(async () => {
     const config = { dynamoDBTableName: 'IdempotencyExecutions' };
@@ -21,6 +21,15 @@ describe('when using idempotender with default configurations', () => {
     await deleteExecution('6123', config);
     await deleteExecution('7123', config);
     await deleteExecution('8123', config);
+    await deleteExecution('9123', config);
+    await deleteExecution('10123', config);
+    await deleteExecution('11123', config);
+  });
+
+  it('map key with custom mapper should work', () => {
+    const idem = idempotender({ keyMapper: (vv) => vv.key1.key2 });
+    const res = idem.mapKey({ key1: { key2: 'value1' } });
+    expect(res).toEqual('value1');
   });
 
   it('map key with embedded jmespath should work', () => {
@@ -161,5 +170,69 @@ describe('when using idempotender with default configurations', () => {
     expect(res3.statusOpen()).toBeTruthy();
   });
 
+  it('lock shouldnt be acquired if lockEnable==false in config', async () => {
+    const idem = idempotender({
+      keyJmespath: 'key1',
+      lockEnable: false,
+    });
+
+    // should succeed without a lock
+    const res1 = await idem.getExecution('9123');
+    expect(res1.statusOpen()).toBeTruthy();
+
+    // shouldnt be locked by the first call
+    // (which could lead to dirt writes, but it's expected)
+    const res2 = await idem.getExecution('9123');
+    expect(res2.statusOpen()).toBeTruthy();
+  });
+
+
+  it('second client should see "complete" status after first client "completes" it when not using locks', async () => {
+    const idem = idempotender({
+      keyJmespath: 'key1',
+      lockEnable: false,
+    });
+
+    // should succeed without a lock
+    const res1 = await idem.getExecution('10123');
+    expect(res1.statusOpen()).toBeTruthy();
+    await res1.complete('res1value');
+    expect(res1.statusCompleted()).toBeTruthy();
+
+    const res2 = await idem.getExecution('10123');
+    expect(res2.statusCompleted()).toBeTruthy();
+    expect(res2.output()).toEqual('res1value');
+  });
+
+  it('when two clients run in parallel, the later writer whould overwrite the first when no lock is used', async () => {
+    const idem = idempotender({
+      keyJmespath: 'key1',
+      lockEnable: false,
+    });
+
+    // first client reads state
+    const res1 = await idem.getExecution('11123');
+    expect(res1.statusOpen()).toBeTruthy();
+
+    // second client reads state (but gets no lock)
+    const res2 = await idem.getExecution('11123');
+    expect(res2.statusOpen()).toBeTruthy();
+
+    // first "completes"
+    await res1.complete('res1value');
+    expect(res1.statusCompleted()).toBeTruthy();
+
+    // second "completes" (and overwrites first)
+    await res1.complete('res2value');
+    expect(res1.statusCompleted()).toBeTruthy();
+
+    // the final state contains data from the second client
+    const res3 = await idem.getExecution('11123');
+    expect(res3.statusCompleted()).toBeTruthy();
+    expect(res3.output()).toEqual('res2value');
+  });
+
 
 });
+
+
