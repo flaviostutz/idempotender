@@ -1,6 +1,12 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-import { lockAcquire, completeExecution, deleteExecution, fetchExecution, setDynamodDBClient } from './db';
+import {
+  lockAcquire,
+  completeExecution,
+  deleteExecution,
+  fetchExecution,
+  setDynamoDBClient,
+} from './db';
 
 describe('when using local dynamodb', () => {
   const config = {
@@ -19,7 +25,7 @@ describe('when using local dynamodb', () => {
       endpoint: 'http://localhost:8000',
       region: 'local-env',
     });
-    setDynamodDBClient(ddbclient);
+    setDynamoDBClient(ddbclient);
     await deleteExecution('111', config);
     await deleteExecution('222', config);
     await deleteExecution('333', config);
@@ -54,5 +60,4 @@ describe('when using local dynamodb', () => {
     const result = await fetchExecution('333', config);
     expect(result).toBeNull();
   });
-
 });

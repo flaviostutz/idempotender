@@ -1,18 +1,17 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-import { setDynamodDBClient, deleteExecution } from './db';
-import { idempotender } from './idempotender';
+import { setDynamoDBClient, deleteExecution } from './db';
+import { core } from './core';
 import { sleep } from './utils';
 
-describe('when using idempotender with custom configurations', () => {
-
+describe('when using core with custom configurations', () => {
   beforeAll(async () => {
     const config = { dynamoDBTableName: 'IdempotencyExecutions' };
     const ddbclient = new DynamoDBClient({
       endpoint: 'http://localhost:8000',
       region: 'local-env',
     });
-    setDynamodDBClient(ddbclient);
+    setDynamoDBClient(ddbclient);
     await deleteExecution('1123', config);
     await deleteExecution('2123', config);
     await deleteExecution('3123', config);
@@ -26,32 +25,14 @@ describe('when using idempotender with custom configurations', () => {
     await deleteExecution('11123', config);
   });
 
-  it('map key with custom mapper should work', () => {
-    const idem = idempotender({ keyMapper: (vv) => vv.key1.key2 });
-    const res = idem.mapKey({ key1: { key2: 'value1' } });
-    expect(res).toEqual('value1');
-  });
-
-  it('map key with embedded jmespath should work', () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
-    const res = idem.mapKey({ key1: 'value1' });
-    expect(res).toEqual('value1');
-  });
-
-  it('map key with embedded jmespath should work 2', () => {
-    const idem = idempotender({ keyJmespath: 'key1.key2[1]' });
-    const res = idem.mapKey({ key1: { key2: ['test1', 'test2', 'test3'] } });
-    expect(res).toEqual('test2');
-  });
-
   it('get inexistant execution should lead to "open" state', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    const idem = core({});
     const res = await idem.getExecution('1123');
     expect(res.statusOpen()).toBeTruthy();
   });
 
   it('save execution should lead to "completed" state', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    const idem = core({});
     const res = await idem.getExecution('2123');
     await res.complete('test');
     const res2 = await idem.getExecution('2123');
@@ -60,7 +41,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('cancel execution should lead to "open" state in subsequent calls', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    const idem = core({});
 
     const res = await idem.getExecution('3123');
     await res.complete('test');
@@ -73,8 +54,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('acquire lock should lead to "locked" state in parallel calls after timeout', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockTTL: 2,
       lockAcquireTimeout: 1,
     });
@@ -89,8 +69,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "completed" if first client resolves it under the lockAcquireTimeout time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
     });
@@ -98,8 +77,11 @@ describe('when using idempotender with custom configurations', () => {
     // should succeed with a lock
     const res1 = await idem.getExecution('5123');
     expect(res1.statusOpen()).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    setTimeout(() => { res1.complete('test2'); }, 1000);
+
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      res1.complete('test2');
+    }, 1000);
 
     // should be locked by the first call, but it will retry
     // and as the first process will complete it, this should
@@ -110,8 +92,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "open" if first client cancels it under the lockAcquireTimeout time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
     });
@@ -119,8 +100,11 @@ describe('when using idempotender with custom configurations', () => {
     // should succeed with a lock
     const res1 = await idem.getExecution('6123');
     expect(res1.statusOpen()).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    setTimeout(() => { res1.cancel(); }, 1000);
+
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      res1.cancel();
+    }, 1000);
 
     // should be locked by the first call, but it will retry
     // and as the first process will complete it, this should
@@ -130,8 +114,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('"completed" execution should be back to "open" after execution expiration time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockTTL: 0.5,
       lockAcquireTimeout: 0.4,
       executionTTL: 1,
@@ -151,8 +134,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('"locked" execution should be back to "open" after lock expiration time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockTTL: 1.1,
       lockAcquireTimeout: 0.3,
       executionTTL: 3,
@@ -171,8 +153,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('lock shouldnt be acquired if lockEnable==false in config', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockEnable: false,
     });
 
@@ -186,10 +167,8 @@ describe('when using idempotender with custom configurations', () => {
     expect(res2.statusOpen()).toBeTruthy();
   });
 
-
   it('second client should see "complete" status after first client "completes" it when not using locks', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockEnable: false,
     });
 
@@ -205,8 +184,7 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('when two clients run in parallel, the later writer whould overwrite the first when no lock is used', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    const idem = core({
       lockEnable: false,
     });
 
@@ -231,8 +209,4 @@ describe('when using idempotender with custom configurations', () => {
     expect(res3.statusCompleted()).toBeTruthy();
     expect(res3.output()).toEqual('res2value');
   });
-
-
 });
-
-
