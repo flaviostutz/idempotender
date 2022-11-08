@@ -1,4 +1,6 @@
 # idempotender
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender?ref=badge_shield)
+
 
 Middy middleware for making AWS Lambda Functions imdepotent.
 
@@ -323,3 +325,7 @@ The input for lambda functions called through a AWS API Gateway is as follows. K
   "isBase64Encoded": false
 }
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender?ref=badge_large)
