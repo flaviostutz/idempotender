@@ -23,6 +23,7 @@ describe('when using core with custom configurations', () => {
     await deleteExecution('9123', config);
     await deleteExecution('10123', config);
     await deleteExecution('11123', config);
+    await deleteExecution('h2123', config);
   });
 
   it('get inexistant execution should lead to "open" state', async () => {
@@ -36,6 +37,25 @@ describe('when using core with custom configurations', () => {
     const res = await idem.getExecution('2123');
     await res.complete('test');
     const res2 = await idem.getExecution('2123');
+    expect(res2.statusOpen()).toBeFalsy();
+    expect(res2.statusCompleted()).toBeTruthy();
+  });
+
+  it('save execution should not take too long for large keys', async () => {
+    const idem = core({});
+    const key = 'dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5';
+    const res = await idem.getExecution(key);
+    await res.complete('test');
+    const res2 = await idem.getExecution(key);
+    expect(res2.statusOpen()).toBeFalsy();
+    expect(res2.statusCompleted()).toBeTruthy();
+  });
+
+  it('save execution should lead to "completed" state even if not using hash', async () => {
+    const idem = core({ keyHash: false });
+    const res = await idem.getExecution('h2123');
+    await res.complete('test');
+    const res2 = await idem.getExecution('h2123');
     expect(res2.statusOpen()).toBeFalsy();
     expect(res2.statusCompleted()).toBeTruthy();
   });

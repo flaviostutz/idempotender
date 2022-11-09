@@ -1,3 +1,4 @@
+/* eslint-disable no-undefined */
 import jmespath from 'jmespath';
 import idempotenderCore, { Execution } from 'idempotender-core';
 import middy from '@middy/core';
@@ -10,7 +11,6 @@ const jmespathMapper = (query: string) => {
     return jmespath.search(input, query);
   };
 };
-
 
 const middleware = (config: IdempotenderMiddyConfig):
     middy.MiddlewareObj<APIGatewayProxyEvent, APIGatewayProxyResult> => {
@@ -31,76 +31,90 @@ const middleware = (config: IdempotenderMiddyConfig):
 
   const idemCore = idempotenderCore(config);
 
-  const before: middy.MiddlewareFn<APIGatewayProxyEvent, APIGatewayProxyResult> =
-    async (request): Promise<any> => {
-      if (!config.keyMapper) {
-        throw new Error('keyMapper shouldnt be null');
+  const before: middy.MiddlewareFn = async (request): Promise<any> => {
+    if (!config.keyMapper) {
+      throw new Error('keyMapper shouldnt be null');
+    }
+
+    const ckey = config.keyMapper(request.event);
+
+    if (!ckey || typeof ckey !== 'string' || ckey.length <= 4) {
+      throw new Error(`The key used for idempotency must be a string with len>4. key=${ckey}`);
+    }
+
+    // prefix key with lambda id from arn to reduce even more the chance of collision
+    const lambdaPrefix = request.context.invokedFunctionArn.split(':')[4];
+    const key = `${lambdaPrefix}:${ckey}`;
+
+    // get execution
+    const execution = await idemCore.getExecution(key);
+
+    // check if it was completed, what means it was already run before and
+    // we already have the previous results of this execution
+    if (execution.statusCompleted()) {
+      const previousOut = execution.output();
+      if (previousOut) {
+        const pout = JSON.parse(previousOut);
+        // it should return immediatelly to avoid other transformations
+        // for other middlewares to take place, because the output
+        // was saved on the first call after other middlewares
+        // already changed the response, so we shoudn't transform again now
+        return Promise.resolve({ ...request.response, ...pout.data });
       }
+      return Promise.resolve(null);
+    }
 
-      const key = config.keyMapper(request.event);
+    // even after waiting for some time, we couldn't get a lock, so we fail
+    if (execution.statusLocked()) {
+      throw new Error('Couldn\'t acquire idempotency lock for this request. Try again later.');
+    }
 
-      // get execution
-      const execution = await idemCore.getExecution(key);
+    // sanity check
+    if (!execution.statusOpen() && !execution.statusCompleted()) {
+      throw new Error('Execution should be in status "open" or "locked"');
+    }
 
-      // check if it was completed, what means it was already run before and
-      // we already have the previous results of this execution
-      if (execution.statusCompleted()) {
-        return execution.output();
-      }
+    // store execution to use in a later phase
+    request.internal = { ...request.internal, ...{ execution } };
+    return Promise.resolve(undefined);
+  };
 
-      // even after waiting for some time, we couldn't get a lock, so we fail
-      if (execution.statusLocked()) {
-        console.warn(`Timeout getting idempotency lock for key ${key}`);
-        return {
-          statusCode: 409,
-          body: JSON.stringify('Couldn\'t acquire idempotency lock for this request. Try again later.'),
-        };
-      }
+  const after: middy.MiddlewareFn = async (request): Promise<any> => {
+    const { execution } = request.internal;
+    if (!execution) {
+      throw new Error('request.internal.execution should be set');
+    }
+    const exec = <Execution>execution;
 
-      if (!execution.statusOpen()) {
-        throw new Error('Execution should be in status "open"');
-      }
-
-      // store execution to use in a later phase
-      request.internal = { ...request.internal, ...{ execution } };
-      return null;
-    };
-
-  const after: middy.MiddlewareFn<APIGatewayProxyEvent, APIGatewayProxyResult> =
-    async (request): Promise<any> => {
-      const { execution } = request.internal;
-      if (!execution) {
-        throw new Error('request.internal.execution should be set');
-      }
-      const exec = <Execution>execution;
-
-      // actual function was executed
+    // actual function was executed. save results
+    if (exec.statusOpen()) {
+      // wrap response so it can support null values
+      const output = {
+        data: request.response,
+      };
       // store response for future calls to the same key
-      let output = '';
-      if (request.response) {
-        const resp = {
-          // will work with json parsed or non parsed body
-          body: request.response.body,
-          headers: request.response.headers,
-          statusCode: request.response.statusCode,
-        };
-        output = JSON.stringify(resp);
-      }
-      await exec.complete(output);
+      const outputstr = JSON.stringify(output);
+      await exec.complete(outputstr);
+      return Promise.resolve(undefined);
+    }
 
-      return null;
-    };
+    // sanity check
+    if (!exec.statusCompleted() && !exec.statusLocked()) {
+      throw new Error('Status should be either "complemented" or "locked"');
+    }
 
-  const onError: middy.MiddlewareFn<APIGatewayProxyEvent, APIGatewayProxyResult> =
-    async (request): Promise<any> => {
-      const { execution } = request.internal;
-      if (!execution) {
-        return null;
-      }
-      const exec = <Execution>execution;
-      await exec.cancel();
+    return Promise.resolve(undefined);
+  };
+
+  const onError: middy.MiddlewareFn = async (request): Promise<any> => {
+    const { execution } = request.internal;
+    if (!execution) {
       return null;
-    };
+    }
+    const exec = <Execution>execution;
+    await exec.cancel();
+    return Promise.resolve(undefined);
+  };
 
   return {
     before,

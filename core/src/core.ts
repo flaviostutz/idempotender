@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { fetchExecution, lockAcquire, deleteExecution, completeExecution } from './db';
 import { Execution } from './types/Execution';
 import { ExecutionStatus } from './types/ExecutionStatus';
@@ -39,6 +41,14 @@ const core = (config: IdempotenderConfig): Idempotender => {
 
   return {
     getExecution: async (key: string): Promise<Execution> => {
+      let dbKey = key;
+
+      if (config1.keyHash) {
+        const hash = crypto.createHash('sha512');
+        const data = hash.update(key, 'utf-8');
+        dbKey = data.digest('hex');
+      }
+
       // determine status of execution
       let status = ExecutionStatus.OPEN;
       let lockAcquired = false;
@@ -54,7 +64,7 @@ const core = (config: IdempotenderConfig): Idempotender => {
       let st = 500;
 
       do {
-        const executionData = await fetchExecution(key, config1);
+        const executionData = await fetchExecution(dbKey, config1);
         status = getExecutionStatus(executionData);
 
         if (status === ExecutionStatus.COMPLETED) {
@@ -71,7 +81,7 @@ const core = (config: IdempotenderConfig): Idempotender => {
         }
 
         if (status === ExecutionStatus.OPEN) {
-          lockAcquired = await lockAcquire(key, config1);
+          lockAcquired = await lockAcquire(dbKey, config1);
           if (lockAcquired) {
             break;
           }
@@ -98,10 +108,10 @@ const core = (config: IdempotenderConfig): Idempotender => {
           return executionOutput;
         },
         cancel: async (): Promise<void> => {
-          await deleteExecution(key, config1);
+          await deleteExecution(dbKey, config1);
         },
         complete: async (output: string): Promise<void> => {
-          await completeExecution(key, output, config1);
+          await completeExecution(dbKey, output, config1);
           // if this instance is still used it has the "write through" state
           status = ExecutionStatus.COMPLETED;
           executionOutput = output;
