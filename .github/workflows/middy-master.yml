@@ -1,15 +1,17 @@
-name: pr-build
+name: middy-master
 
 on:
-  pull_request:
+  push:
     branches: ['main']
+    paths:
+      - middy/**
 
 jobs:
   build:
-    name: Build PRs
+    name: Build Middy middleware master
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
-      working-directory: ./
+      working-directory: ./middy
       tooling: node
       tooling-version: 16
       target-build: true

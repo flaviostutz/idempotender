@@ -1,15 +1,17 @@
-name: master-build
+name: core-master
 
 on:
   push:
     branches: ['main']
+    paths:
+      - core/**
 
 jobs:
   build:
-    name: Build master
+    name: Build core master
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
-      working-directory: ./
+      working-directory: ./core
       tooling: node
       tooling-version: 16
       target-build: true

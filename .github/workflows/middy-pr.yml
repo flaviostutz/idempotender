@@ -1,0 +1,19 @@
+name: middy-pr
+
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - middy/**
+
+jobs:
+  build:
+    name: Middy middleware PRs
+    uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
+    with:
+      working-directory: ./middy
+      tooling: node
+      tooling-version: 16
+      target-build: true
+      target-lint: true
+      target-unit-tests: true

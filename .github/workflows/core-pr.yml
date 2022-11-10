@@ -1,0 +1,19 @@
+name: core-pr
+
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - core/**
+
+jobs:
+  build:
+    name: Build core PRs
+    uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
+    with:
+      working-directory: ./core
+      tooling: node
+      tooling-version: 16
+      target-build: true
+      target-lint: true
+      target-unit-tests: true
