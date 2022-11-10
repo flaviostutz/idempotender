@@ -96,7 +96,6 @@ const idem = idempotender({
 }
 ```
 
-
 - Config attributes:
 
   - **dynamoDBTableName**
