@@ -23,6 +23,10 @@ describe('when using local dynamodb', () => {
   beforeAll(async () => {
     const ddbclient = new DynamoDBClient({
       endpoint: 'http://localhost:8000',
+      credentials: {
+        accessKeyId: 'dummyAccessKey',
+        secretAccessKey: 'dummySecretKey',
+      },
       region: 'local-env',
     });
     setDynamoDBClient(ddbclient);

@@ -18,6 +18,10 @@ describe('When using default configurations', () => {
     const ddbclient = new DynamoDBClient({
       endpoint: 'http://localhost:8000',
       region: 'local-env',
+      credentials: {
+        accessKeyId: 'dummyAccessKey',
+        secretAccessKey: 'dummySecretKey',
+      },
     });
     setDynamoDBClient(ddbclient);
     const prefix = awsContext().invokedFunctionArn.split(':')[4];
