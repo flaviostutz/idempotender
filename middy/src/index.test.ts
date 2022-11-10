@@ -3,7 +3,6 @@
 import middy from '@middy/core';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import idempotender, { setDynamoDBClient } from 'idempotender-core';
-import { number } from 'yargs';
 
 import { awsContext } from './__mock__/awsContext';
 // import { awsAPIProxyRequest } from './__mock__/awsRequest';

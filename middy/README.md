@@ -2,23 +2,18 @@
 
 Middy middleware for making AWS Lambda Functions imdepotent.
 
-Idempotency is the attribute of a function to be called multiple times with a certain input so the underlying state and the output stays the same as the first execution regardless of how many times the function was called with that input.
+Create a DynamoDB table and add this middleware to Middy so it selects a certain input attribute as the idempotency key and your function will start being idempontent.
 
-Idempotender can be used to create this attribute to any function. You can use the library directly in any function, or you can use it as a Middy middleware.
+The overall steps that this middlware performs are:
 
-The overall process for idempotency is:
-
-- At the beginning of the function execution, create a key based on input
-- If the key exists in a DynamoDB table, it means this execution was already done, so get the previous output and return it to the caller. The caller won't know it wasn't really executed, and will receive the same response as the first client, which is expected.
-- If the key doesn't exist, run the actual function behavior and at the end save the output to DynamoDB table before returning it to the caller
+- At the beginning of the function execution, it will extract a key from the input and look for that "execution" in DynamoDB
+- In general, if the key exists in a DynamoDB table, it means this execution was already done, so the middleware get the previous output and return it to the Lambda function caller. The caller won't know it wasn't really executed, and will receive the same response as the first client, which is expected.
+- If the key doesn't exist, then actual function handler will be run and at the end the middleware will save the output to DynamoDB table before returning it to the caller
+- Imdepondenter will control a lock between two parallel requests so only one request will be processed at a time for a specific key and the second one will receive the same contents of the first request, but the actual handler logic will run only once
 
 ## Usage
 
-- `npm install --save idempotender`
-
-```js
-import idempotender from 'idempotender';
-```
+- `npm install --save idempotender-middy`
 
 - Create DynamoDB table with structure:
 
@@ -38,14 +33,14 @@ Resources:
         Enabled: true
 ```
 
-### Example: As Middy middleware in Lambda
+### Example: Simple Lambda
 
 - In this example, we will use attribute 'param1' from event as the key of idempotency while hashing and using lock to avoid concurrency
 
 - Create Lambda function
 
 ```js
-import idempotender from 'idempotender';
+import idempotenderMiddy from 'idempotender-middy';
 
 const handler = middy((event, context) => {
   console.log(`Running for '${event.param1}' on ${new Date()}`);
@@ -53,120 +48,60 @@ const handler = middy((event, context) => {
 });
 
 handler.use(
-  idempotender({
-    dynamoDBTableName: 'Executions',
+  idempotenderMiddy({
     keyJmespath: 'param1',
   }),
 );
 ```
 
-### Example: As Middy middleware in Lambda via REST API
+### Example: Lambda called via REST API
 
 - In this example, the Lambda is invoked through AWS API Gateway, so we select attributes 'method', 'path' and request 'body' from event as the key of idempotency.
 
 - The extracted key will then be hashed before being stored in database, so data is not exposed, but you have a very very tiny change of collision (we use hash-256).
 
-- `npm install --save idempotender`
-
 - Create AWS Lambda function exposed through AWS API Gateway
 
 ```js
-import idempotender from 'idempotender';
+import idempotenderMiddy from 'idempotender-middy';
 
 const handler = middy((event, context) => {
-  console.log('Will only execute this once per idempotence key!');
+  console.log('Will only execute this once for the same URL method + path + body contents');
   return { message: `This was run for '${event.param1}' on ${new Date()}` };
 });
 
 handler.use(
   idempotender({
-    lockEnable: true,
-    lockTTL: 3600,
-    executionTTL: 24 * 3600,
-    dynamoDBTableName: 'Executions',
     keyJmespath: '[method, path, body]',
   }),
 );
 ```
 
-### Example: As Middy middleware in Lambda (REST API with Idempotency-Key header)
+### Example: Lambda called via REST API with Idempotency-Key header
 
 - In this example, the Lambda is invoked through AWS API Gateway, and we will use Stripe style for controlling the idempotency key (header Idempotency-Key). See https://stripe.com/docs/api/idempotent_requests.
 
 - We won't use hash and the quality of the idempotency key is responsability of the caller.
 
-- `npm install --save idempotender`
+- The idempotency key will be valid for 24h, which means that another call with the same idempotency header after 24h will make the function run again.
 
 - Create AWS Lambda function exposed through AWS API Gateway
 
 ```js
-import idempotender from 'idempotender';
+import idempotenderMiddy from 'idempotender-middy';
 
 const handler = middy((event, context) => {
-  console.log('Will only execute this once per idempotence key!');
+  console.log('Will only execute this once per "Idempotency-Key" header value');
   return { message: `This was run for '${event.param1}' on ${new Date()}` };
 });
 
 handler.use(
-  idempotender({
-    lockEnable: true,
-    lockTTL: 60,
+  idempotenderMiddy({
+    keyHash: false,
     executionTTL: 24 * 3600,
-    dynamoDBTableName: 'Executions',
     keyJmespath: "[headers['Idempotency-Key']]",
   }),
 );
-```
-
-### Example: As lib in NodeJS
-
-- In this example, the function calls explicitely the idempotency utility, and will use a custom mapper to transform the input key to the key used in database
-
-- It will deactivate the hashing mechanism, so in the database you can see the actual contents of param1:param2 and there is no chance of collision.
-
-- `npm install --save idempotender`
-
-- Create function
-
-```js
-import idempotender from 'idempotender';
-
-const idem = idempotender({
-  executionTTL: 24 * 3600,
-  dynamoDBTableName: 'Executions',
-  keyMapper: (key) => `${key.param1}:${key.param2}`,
-  keyHash: false,
-});
-
-function myIdempotentFunction(param1: string, param2: string): string {
-  // get current idempotency status
-  // acquire lock to avoid concurrent calls to this function
-  const execution = idem.getExecution({ param1, param2 });
-  // already processed before, so return previous output data response
-  if (execution.statusSaved()) {
-    return execution.output;
-  }
-  // another process is processing this in parallel
-  if (execution.statusLocked()) {
-    throw new Error(`Concurrent processing for idempotency key ${execution.key}`);
-  }
-
-  // DO BUSINESS HERE
-  try {
-    console.log(`I only hello world for (${param1},${param2}) once!`);
-    const output = `This is output '${param1}${param2}' at ${new Date()}`;
-  } catch (err) {
-    console.log('Error during function execution');
-    idem.deleteExecution(execution.key);
-  }
-
-  // save execution output so further calls in the next 24h
-  // using the same param1,param2 will return this response
-  // without actually running the business function
-  idem.saveExecution(execution.key, output);
-
-  return output;
-}
 ```
 
 ## Reference
@@ -174,15 +109,15 @@ function myIdempotentFunction(param1: string, param2: string): string {
 - These are the default values of the configuration
 
 ```js
-const idem = idempotender({
-    dynamoDBTableName: 'IdempotencyExecutions',
-    lockEnable: true,
-    lockTTL: 10,
-    lockRetryTimeout: 15,
-    executionTTL: 24 * 3600,
-    keyJmespath: null,
-    keyMapper: null,
-    keyHash: true
+const idem = idempotenderMiddy({
+  dynamoDBTableName: 'IdempotencyExecutions',
+  lockEnable: true,
+  lockTTL: 60,
+  executionTTL: 24 * 3600,
+  keyHash: true,
+  lockAcquireTimeout: 10,
+  keyJmespath: null,
+  keyMapper: null,
 }
 ```
 
@@ -210,9 +145,9 @@ const idem = idempotender({
 
     - Defaults to '10'
 
-  - **lockRetryTimeout**
+  - **lockAcquireTimeout**
 
-    - Time in seconds waiting for an existing lock to be released in case of concurrency. If the lock is released in this period, we will try to get the last saved output from the other process (if it was saved) and can return the previous output gracefully. If after lock is released and output was not saved, we will try to acquire the lock again.
+    - Time in seconds waiting for an existing lock to be released in case of concurrency. If the lock is released in this period, we will try to get the last saved output from the other process (if it was saved) and return the previous output gracefully. If after lock is released the output was not saved, we will try to acquire the lock again.
 
     - Defaults to '15'
 
@@ -250,47 +185,13 @@ const idem = idempotender({
 
     - Defaults to 'true'
 
-## Functions
-
-- **mapKey(input:any)**
-
-  - Converts an arbitrary input data to the key used in database operations to identify this idempotent execution
-
-  - If a custom 'keyMapper' function is set, it will use this function to do the conversion
-
-  - If 'keyJmespath' is set, 'input' must be an object and the results of the jmespath query against this object will be used as the key
-
-- **saveExecution(key:string, output:string)**
-
-  - Save the output as the execution result for a specific key, so that next time anyone tries to "getExecution(key)" with this key, it will be returned
-
-- **getExecution(input:string):object**
-
-  - Queries the execution table for a certain input. If it doesn't exist and lock is enabled, creates the record for lock control
-
-  - The actual key used in database operations is the result of the 'input' mapped to a key (see config 'keyMapper' and 'keyJmespath') and, if enabled, hashed with SHA-256.
-
-  - Returns an object with struct:
-
-    - **statusSaved():boolean**
-
-      - Returns true if a previous execution with corresponding output data was saved and is available via attribute 'output'
-
-  - **statusLocked():boolean**
-
-    - Returns true if another function started processing this but didn't reached "saveExecution()" still, indicating these two executions might be running in parallel, but only one should be able to actually run
-
-  - **output**: previously saved output, indicating this function was already called before
-
-- **deleteExecution(key:string)**
-
-  - Deletes an execution. Normally used when something goes wrong during the function execution and you want to clear the execution so another call can try to execute the function again later on
-
 ## AWS input samples
 
-### AWS API Gateway request
+When using Lambda with different callers, the input may have different data that you have to understand in order to create a good jmespath query for getting a good source of idempotency key.
 
-The input for lambda functions called through a AWS API Gateway is as follows. Keep this in mind when creating jmespath selectors.
+See below some sample inputs depending on which service has called Lambda
+
+### AWS API Gateway request
 
 ```json
 {
