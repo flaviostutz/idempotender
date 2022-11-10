@@ -13,6 +13,7 @@ jobs:
       working-directory: ./core
       tooling: node
       tooling-version: 16
+      tooling-cache: yarn
       stage: prd
       target-build: true
       target-lint: true
@@ -25,6 +26,7 @@ jobs:
       working-directory: ./middy
       tooling: node
       tooling-version: 16
+      tooling-cache: yarn
       stage: prd
       target-build: true
       target-lint: true

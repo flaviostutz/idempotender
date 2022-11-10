@@ -1,5 +1,5 @@
 build:
-	yarn install
+	yarn install --frozen-lockfile
 	rm -rf dist
 	./node_modules/.bin/esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
 	./node_modules/.bin/tsc --emitDeclarationOnly --outDir dist

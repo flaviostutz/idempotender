@@ -14,6 +14,7 @@ jobs:
       working-directory: ./middy
       tooling: node
       tooling-version: 16
+      tooling-cache: yarn
       target-build: true
       target-lint: true
       target-unit-tests: true
