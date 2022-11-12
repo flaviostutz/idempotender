@@ -1,6 +1,6 @@
 import { Context } from 'aws-lambda';
 
-const awsContext = ():Context => {
+const awsContext = (): Context => {
   return {
     functionName: 'mockFunc',
     callbackWaitsForEmptyEventLoop: true,

@@ -10,7 +10,7 @@
   "engines": {
     "node": ">=16"
   },
- "scripts": {
+  "scripts": {
     "build": "make build",
     "test": "jest"
   },

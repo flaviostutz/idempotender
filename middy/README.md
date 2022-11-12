@@ -123,6 +123,7 @@ handler.use(
 - If you don't evaluate clearly, an error "500" can be considered "normal" and then the actual execution won't be retried until the execution timeout expires (sometimes it can be only in 24h, for example) then your application can be stuck for a while.
 
 - The execution is considered failed:
+
   - Always when the handler function throws an exception
     - It is canceled even when another middleware changes the response on "onError" callback and middy doesn't rethrow the exception
     - It means that maybe you can return a custom response when an exception happens and it wont prevent the idempotent execution to be canceled
@@ -155,13 +156,9 @@ const idem = idempotenderMiddy({
 - You must use idempotender middleware as the first middleware in the chain so that it can store the response after all other middlewares are executed and be the first to return when a idempotent call is detected
 
 ```js
-  // example
-  handler
-    .use(idempotenderMiddy(config))
-    .use(httpErrorHandler())
-    .use(cors())
+// example
+handler.use(idempotenderMiddy(config)).use(httpErrorHandler()).use(cors());
 ```
-
 
 - Config attributes:
 

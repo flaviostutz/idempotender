@@ -12,13 +12,13 @@ const jmespathMapper = (query: string) => {
   };
 };
 
-const isReqFromAPIGW = (request:any):boolean => {
+const isReqFromAPIGW = (request: any): boolean => {
   return request.event.httpMethod;
 };
 
-const middleware = (config: IdempotenderMiddyConfig):
-    middy.MiddlewareObj<APIGatewayProxyEvent, APIGatewayProxyResult> => {
-
+const middleware = (
+  config: IdempotenderMiddyConfig,
+): middy.MiddlewareObj<APIGatewayProxyEvent, APIGatewayProxyResult> => {
   if (!config.keyMapper && !config.keyJmespath?.trim()) {
     throw new Error(
       "Config: Either 'keyJmespath' or a custom 'keyMapper' function is required in configuration object",
@@ -98,7 +98,7 @@ const middleware = (config: IdempotenderMiddyConfig):
 
     // even after waiting for some time, we couldn't get a lock, so we fail
     if (execution.statusLocked()) {
-      throw new Error('Couldn\'t acquire idempotency lock for this request. Try again later.');
+      throw new Error("Couldn't acquire idempotency lock for this request. Try again later.");
     }
 
     // sanity check
@@ -130,7 +130,6 @@ const middleware = (config: IdempotenderMiddyConfig):
 
     // actual function was executed
     if (exec.statusOpen()) {
-
       // validate response
       let { validResponseJmespath } = config;
       if (typeof validResponseJmespath === 'undefined' && isReqFromAPIGW(request)) {
@@ -155,7 +154,9 @@ const middleware = (config: IdempotenderMiddyConfig):
           const valid = jmespath.search(resp, validResponseJmespath);
           if (typeof valid !== 'boolean') {
             await exec.cancel();
-            throw new Error("'config.validResponseJmespath' should evaluate to a boolean expression");
+            throw new Error(
+              "'config.validResponseJmespath' should evaluate to a boolean expression",
+            );
           }
           if (!valid) {
             await exec.cancel();
