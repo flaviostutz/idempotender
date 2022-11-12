@@ -173,3 +173,4 @@ const idem = idempotender({
 - **deleteExecution(key:string)**
 
   - Deletes an execution. Normally used when something goes wrong during the function execution and you want to clear the execution so another call can try to execute the function again later on
+
