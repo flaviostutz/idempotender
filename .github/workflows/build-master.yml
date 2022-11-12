@@ -1,17 +1,15 @@
-name: core-pr
+name: build-master
 
 on:
-  pull_request:
+  push:
     branches: ['main']
-    paths:
-      - core/**
 
 jobs:
   build:
-    name: Build core PRs
+    name: Build affected from master
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
-      working-directory: ./core
+      working-directory: ./
       tooling: node
       tooling-version: 16
       tooling-cache: yarn

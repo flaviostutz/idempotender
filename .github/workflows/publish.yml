@@ -6,11 +6,11 @@ on:
       - '*'
 
 jobs:
-  build-core:
+  build-affected:
     name: Core build, lint and test
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
-      working-directory: ./core
+      working-directory: ./
       tooling: node
       tooling-version: 16
       tooling-cache: yarn
@@ -19,20 +19,7 @@ jobs:
       target-lint: true
       target-unit-tests: true
 
-  build-middy:
-    name: Middy build, lint and test
-    uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
-    with:
-      working-directory: ./middy
-      tooling: node
-      tooling-version: 16
-      tooling-cache: yarn
-      stage: prd
-      target-build: true
-      target-lint: true
-      target-unit-tests: true
-
-  publish-core:
+  publish-affected:
     runs-on: ubuntu-latest
     needs: [ build-core, build-middy ]
     steps:
@@ -40,26 +27,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '16.x'
-          registry-url: 'https://registry.npmjs.org'
+          cache: yarn
       - run: make build
-        working-directory: ./core
+        working-directory: ./
       - run: make publish
-        working-directory: ./core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-
-  publish-middy:
-    runs-on: ubuntu-latest
-    needs: [ build-core, build-middy ]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '16.x'
-          registry-url: 'https://registry.npmjs.org'
-      - run: make build
-        working-directory: ./middy
-      - run: make publish
-        working-directory: ./middy
+        working-directory: ./
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

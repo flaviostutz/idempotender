@@ -11,7 +11,7 @@
     "node": ">=16"
   },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js && tsc --emitDeclarationOnly --outDir dist",
+    "build": "make build",
     "test": "jest"
   },
   "repository": {

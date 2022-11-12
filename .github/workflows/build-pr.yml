@@ -1,17 +1,15 @@
-name: middy-pr
+name: core-pr
 
 on:
   pull_request:
     branches: ['main']
-    paths:
-      - middy/**
 
 jobs:
   build:
-    name: Middy middleware PRs
+    name: Build core PRs
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
-      working-directory: ./middy
+      working-directory: ./
       tooling: node
       tooling-version: 16
       tooling-cache: yarn

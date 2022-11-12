@@ -1,7 +1,8 @@
 build:
 	yarn install --frozen-lockfile
 	rm -rf dist
-	yarn build
+	yarn exec esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
+	yarn exec tsc --emitDeclarationOnly --outDir dist
 
 lint:
 	npx prettier --loglevel warn --write .
@@ -21,3 +22,4 @@ publish:
 	npm publish
 
 all: build lint test
+
