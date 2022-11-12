@@ -6,4 +6,6 @@ dist
 .serverless/
 node_modules
 .tmp
+.yarn
+.pnp.*
 

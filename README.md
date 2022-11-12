@@ -1,5 +1,12 @@
 # idempotender
 
+TODO
+
+[ ] migrate to Yarn 3
+[ ] configure NX
+[ ] publish pakages by tagging
+[ ] document complete example
+
 JS lib for helping creating idempotent functions by storing states in DynamoDB.
 
 Idempotency is the attribute of a function to be called multiple times with a certain input so the underlying state and the output stays the same as the first execution regardless of how many times the function was called with that input.

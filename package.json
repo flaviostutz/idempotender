@@ -4,5 +4,6 @@
   "workspaces": [
     "core",
     "middy"
-  ]
+  ],
+  "packageManager": "yarn@3.2.4"
 }
