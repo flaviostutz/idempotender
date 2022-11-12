@@ -3,4 +3,6 @@
 # e.g: "make whatever" runs the "whatever" target on affected modules
 # if you create a specific target, it will be preferred to this generic rule
 %:
-	yarn exec nx affected --target=$@
+	yarn install
+	npx nx affected --target=$@
+
