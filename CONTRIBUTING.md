@@ -10,13 +10,23 @@ We have the "core" module, which is a plain javascript lib with basic operations
 
 Each lib is published separatedly in npm.
 
+## Tools
+
+- Esbuild for bundling
+- TSC for typescript checks
+- ESlint for general coding rules checks
+- Prettier for code formatting
+- Jest for testing
+- Yarn v3 for package management
+- NX for mapping dependencies and triggering yarn targets as needed
+  - For example, if you changed a module that is a dependency of another module, it will trigger the builds from the less dependant to the most dependant module
+
 ## Basic operations
 
 ```sh
 make build
 make lint
 make test
-make rules-doc
 ```
 
 ## Questions and discussions
