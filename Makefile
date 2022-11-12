@@ -7,4 +7,4 @@
 	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD
 
 get-environment-url:
-	echo "Skipping"
+	echo "http://dummy"
