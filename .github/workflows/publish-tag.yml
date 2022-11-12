@@ -1,4 +1,4 @@
-name: tag-publish
+name: publish-tag
 
 on:
   push:
@@ -18,12 +18,16 @@ jobs:
       target-build: true
       target-lint: true
       target-unit-tests: true
+      target-get-environment-url: false
 
   publish-affected:
     runs-on: ubuntu-latest
-    needs: [ build-core, build-middy ]
+    needs: [ build-affected ]
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: nrwl/nx-set-shas@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '16.x'
