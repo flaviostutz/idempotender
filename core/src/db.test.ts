@@ -19,7 +19,6 @@ describe('when using local dynamodb', () => {
     keyHash: true,
     lockAcquireTimeout: 10,
   };
-
   beforeAll(async () => {
     const ddbclient = new DynamoDBClient({
       endpoint: 'http://localhost:8000',

@@ -104,6 +104,35 @@ handler.use(
 );
 ```
 
+## Key selection
+
+- This is critical for a good Idempotency implementation, as it dictates what is the domain of an idempotent execution. keyJmespath (or a custom mapper) have to be specifically crafted for your application, as it requires specific knowledge about the input of the Lambda function and which attributes must be taken in consideration for selecting a key.
+
+- Select a key that uniquely identifies a specific call. Two call to the same key will result in the same contents, having only the first call actually processed and the second one returning the cached contents from the previous execution.
+
+- You might be tempted to use the entire input as the source of this key, but probably it will have timestamp based data about when the call was made, or client information (such as user agent, capabilities) that that not necessarily is used as the basis for defining idempotency
+
+- Use configuration keyJmespath or keyMapper to define how to extract the key from the input of the function
+
+- Idempotender prefixes the key with the number part of your Lambda ARN, so you can reuse the same DynamoDB for multiple Lambda functions without the risk of collision between them.
+
+## Identification of a successful execution
+
+- It's important to be clear about if the response of a execution indicates a successful execution so Idempotender decides to store its output or cancels the lock for a later retry by the client in case there is a temporary error going on.
+
+- If you don't evaluate clearly, an error "500" can be considered "normal" and then the actual execution won't be retried until the execution timeout expires (sometimes it can be only in 24h, for example) then your application can be stuck for a while.
+
+- The execution is considered failed:
+  - Always when the handler function throws an exception
+    - It is canceled even when another middleware changes the response on "onError" callback and middy doesn't rethrow the exception
+    - It means that maybe you can return a custom response when an exception happens and it wont prevent the idempotent execution to be canceled
+    - Throwing an exception is the best way to indicate that something unexpected happened, for example, X-Ray uses it to identify root causes
+  - Always when the response is "not valid"
+    - jmespath query from 'config.validResponseJmespath' is run against the response object to evaluate if it's valid or not
+    - This is evaluated only when the response is an object or a string that contains json contents
+
+- When an execution is failed, the lock will be cancelled and the execution response won't be saved/reused in later calls
+
 ## Reference
 
 - These are the default values of the configuration
@@ -120,6 +149,17 @@ const idem = idempotenderMiddy({
   keyMapper: null,
 }
 ```
+
+- You must use idempotender middleware as the first middleware in the chain so that it can store the response after all other middlewares are executed and be the first to return when a idempotent call is detected
+
+```js
+  // example
+  handler
+    .use(idempotenderMiddy(config))
+    .use(httpErrorHandler())
+    .use(cors())
+```
+
 
 - Config attributes:
 
@@ -169,9 +209,15 @@ const idem = idempotenderMiddy({
 
     - jmespath expression used for extracting the database key from input data. Check https://jmespath.org/tutorial.html
 
-    - When using Middy, the input is the lambda 'input' object
-
     - Required if no custom keyMapper is used. Not used if 'keyMapper' is defined.
+
+  - **validResponseJmespath**
+
+    - jmespath expression that is executed against the response and returns a boolean value indicating if the contents are valid or not
+
+    - If response is a string, Idempotender will try to parse it as json and do the check
+
+    - If not defined, the default expression 'statusCode == undefined || statusCode >= '200' && statusCode < '300'' is used, which is useful in most REST API scenarios.
 
   - **keyHash**
 
@@ -185,13 +231,13 @@ const idem = idempotenderMiddy({
 
     - Defaults to 'true'
 
-## AWS input samples
+## AWS inputs
 
 When using Lambda with different callers, the input may have different data that you have to understand in order to create a good jmespath query for getting a good source of idempotency key.
 
 See below some sample inputs depending on which service has called Lambda
 
-### AWS API Gateway request
+### AWS API Gateway sample request
 
 ```json
 {
@@ -224,3 +270,8 @@ See below some sample inputs depending on which service has called Lambda
   "isBase64Encoded": false
 }
 ```
+
+## Special behaviors depending on AWS input
+
+- When Lambda was invoked via a AWS API GW in a second time in which the cache was used for idempotency, the http header 'X-Idempotency-From' is added with the timestamp of the first call that actually run the function.
+

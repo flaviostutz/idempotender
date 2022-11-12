@@ -13,6 +13,13 @@ import idempotenderMiddy from './index';
 //   return new Promise((resolve) => setTimeout(resolve, ms));
 // };
 
+const prefix = awsContext().invokedFunctionArn.split(':')[4];
+const idem = idempotender({ lockAcquireTimeout: 1, lockTTL: 2 });
+
+const randomInt = ():number => {
+  return Math.floor(Math.random() * 999999);
+};
+
 describe('When using default configurations', () => {
   beforeAll(async () => {
     const ddbclient = new DynamoDBClient({
@@ -24,8 +31,6 @@ describe('When using default configurations', () => {
       },
     });
     setDynamoDBClient(ddbclient);
-    const prefix = awsContext().invokedFunctionArn.split(':')[4];
-    const idem = idempotender({});
     const exec1 = await idem.getExecution(`${prefix}:mykey111`);
     await exec1.cancel();
     const exec2 = await idem.getExecution(`${prefix}:mykey222`);
@@ -38,6 +43,16 @@ describe('When using default configurations', () => {
     await exec5.cancel();
     const exec6 = await idem.getExecution(`${prefix}:mykey666`);
     await exec6.cancel();
+    const exec7 = await idem.getExecution(`${prefix}:mykey777`);
+    await exec7.cancel();
+    const exec8 = await idem.getExecution(`${prefix}:mykey888`);
+    await exec8.cancel();
+    const exec9 = await idem.getExecution(`${prefix}:mykey999`);
+    await exec9.cancel();
+    const exec19 = await idem.getExecution(`${prefix}:mykey1999`);
+    await exec19.cancel();
+    const exec29 = await idem.getExecution(`${prefix}:mykey2999`);
+    await exec29.cancel();
   });
 
   it('Jmespath expression should be required', async () => {
@@ -51,23 +66,24 @@ describe('When using default configurations', () => {
   });
 
   it('Should fail if a valid key cannot be extracted', async () => {
-    let errorThrown = false;
     const handler = middy(() => {});
     handler
-      .use(idempotenderMiddy({ keyJmespath: 'param1' }))
-      .onError(() => {
-        errorThrown = true;
-      });
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }));
     const event = {};
-    await handler(event, awsContext());
-    expect(errorThrown).toBeTruthy();
+
+    const invokeHandler = async ():Promise<void> => {
+      return handler(event, awsContext());
+    };
+
+    await expect(invokeHandler)
+      .rejects
+      .toThrowError();
   });
 
   it('Should succeed if key can be extracted', async () => {
     const handler = middy(() => {});
     handler
-      .use(idempotenderMiddy({ keyJmespath: 'param1' }))
-      .onError((request) => { throw new Error(request.error?.message); });
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }));
     const event = { param1: 'valid key here!' };
     await handler(event, awsContext());
   });
@@ -78,12 +94,11 @@ describe('When using default configurations', () => {
       runCount += 1;
       return {
         message: request.param2,
-        on: new Date().getTime(),
+        on: randomInt(),
       };
     });
     handler
-      .use(idempotenderMiddy({ keyJmespath: 'param1' }))
-      .onError((request) => { throw new Error(request.error?.message); });
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }));
 
     const event = { param1: 'mykey111', param2: 'something else' };
     const resp = await handler(event, awsContext());
@@ -92,18 +107,166 @@ describe('When using default configurations', () => {
     expect(runCount).toEqual(1);
   });
 
+  it('Dont save idempotency for invalid responses', async () => {
+    const handler = middy(async (request:any) => {
+      return {
+        key: request.param2,
+        on: randomInt(),
+        status: 11111,
+      };
+    });
+
+    handler.use(idempotenderMiddy({
+      keyJmespath: 'param1',
+      validResponseJmespath: 'on > `-1` && status == `22222`',
+    }));
+
+    const event = { param1: 'mykey999', param2: 'something else' };
+    const resp:any = await handler(event, awsContext());
+    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.status).not.toBe(22222);
+
+    const exec = await idem.getExecution(`${prefix}:mykey999`);
+    expect(exec.statusOpen()).toBeTruthy();
+  });
+
+  it('Save idempotency for valid responses', async () => {
+    const handler = middy(async (request:any) => {
+      return {
+        key: request.param2,
+        on: randomInt(),
+        status: 22222,
+      };
+    });
+
+    handler.use(idempotenderMiddy({
+      keyJmespath: 'param1',
+      validResponseJmespath: 'on > `-1` && status == `22222`',
+    }));
+
+    const event = { param1: 'mykey1999', param2: 'something else' };
+
+    // first call
+    const resp:any = await handler(event, awsContext());
+    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.on).toBeGreaterThan(-1);
+    expect(resp.status).toEqual(22222);
+    const exec = await idem.getExecution(`${prefix}:mykey1999`);
+    expect(exec.statusCompleted()).toBeTruthy();
+
+    // second call
+    const resp2:any = await handler(event, awsContext());
+    expect(resp2.idempotencyFrom).toBeGreaterThan(1000);
+    expect(resp2.on).toBeGreaterThan(-1);
+    expect(resp2.status).toEqual(22222);
+    const exec2 = await idem.getExecution(`${prefix}:mykey1999`);
+    expect(exec2.statusCompleted()).toBeTruthy();
+  });
+
+  it('Return X-Idempotency-From when called via API GW with default resp validator', async () => {
+    const handler = middy(async () => {
+      return {
+        body: 'something',
+        statusCode: 201,
+      };
+    });
+
+    handler.use(idempotenderMiddy({
+      keyJmespath: 'param1',
+      // use default validResponseJmespath
+    }));
+
+    const event = {
+      httpMethod: 'GET',
+      param1: 'mykey2999',
+    };
+
+    // first call
+    const resp:any = await handler(event, awsContext());
+    expect(resp.idempotencyFrom).not.toBeDefined();
+    if (resp.headers) {
+      expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
+    }
+
+    // second call
+    const resp2:any = await handler(event, awsContext());
+    expect(resp2.idempotencyFrom).toBeGreaterThan(1000);
+    expect(resp2.headers['X-Idempotency-From']).toBeDefined();
+  });
+
+
+  it('If handler throws an exception, idempotency should be canceled', async () => {
+    let runCount = 0;
+    const handler = middy(async () => {
+      runCount += 1;
+      throw new Error('Something went wrong, man!');
+    });
+    handler
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    const event = { param1: 'mykey777', param2: 'something else' };
+
+    const invokeHandler = async ():Promise<void> => {
+      return handler(event, awsContext());
+    };
+
+    await expect(invokeHandler)
+      .rejects
+      .toThrowError();
+    expect(runCount).toEqual(1);
+
+    const exec7 = await idem.getExecution(`${prefix}:mykey777`);
+    expect(exec7.statusOpen()).toBeTruthy();
+    expect(exec7.statusLocked()).toBeFalsy();
+    expect(exec7.statusCompleted()).toBeFalsy();
+  });
+
+  it('If handler throws an exception, idempotency should be canceled, even if another middleware changes the response "onError"', async () => {
+    let runCount = 0;
+    const handler = middy(async ():Promise<any> => {
+      runCount += 1;
+      throw new Error('Something went wrong, man!');
+    });
+    handler
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }))
+      .onError(async (request) => {
+        request.response = {
+          statusCode: 412,
+          body: 'Sorry. Try again later',
+        };
+      });
+    const event = { param1: 'mykey888', param2: 'something else' };
+
+    const resp = await handler(event, awsContext());
+    expect(resp).toEqual({
+      statusCode: 412,
+      body: 'Sorry. Try again later',
+    });
+
+    const resp2 = await handler(event, awsContext());
+    expect(resp2).toEqual({
+      statusCode: 412,
+      body: 'Sorry. Try again later',
+    });
+
+    expect(runCount).toEqual(2);
+
+    const exec = await idem.getExecution(`${prefix}:mykey888`);
+    expect(exec.statusOpen()).toBeTruthy();
+    expect(exec.statusLocked()).toBeFalsy();
+    expect(exec.statusCompleted()).toBeFalsy();
+  });
+
   it('Multiple calls with the same input should return same result without running twice', async () => {
     let runCount = 0;
     const handler = middy(async (request:any) => {
       runCount += 1;
       return {
         message: request.param2,
-        on: new Date().getTime(),
+        on: randomInt(),
       };
     });
     handler
-      .use(idempotenderMiddy({ keyJmespath: 'param1' }))
-      .onError((request) => { throw new Error(request.error?.message); });
+      .use(idempotenderMiddy({ keyJmespath: 'param1' }));
 
     const event = { param1: 'mykey222', param2: 'something else' };
 
@@ -132,7 +295,7 @@ describe('When using default configurations', () => {
       // await sleep(30); // will force parallelism but it's not working - making jest hang
       return {
         message: request.param2,
-        on: new Date().getTime(),
+        on: randomInt(),
       };
     });
     handler
@@ -147,23 +310,22 @@ describe('When using default configurations', () => {
       }))
       .after(() => {
         runAfterCount += 1;
-      })
-      .onError((request) => { throw new Error(request.error?.message); });
+      });
 
     const handlerPromises = [];
     const event = { param1: 'mykey333', param2: 'something else' };
+    const event2 = { param1: 'mykey444', param2: 'something else' };
+    const event3 = { param1: 'mykey555', param2: 'something else' };
+    const event4 = { param1: 'mykey666', param2: 'something else' };
     for (let i = 0; i < 30; i += 1) {
       handlerPromises.push(handler(event, awsContext()));
     }
-    const event2 = { param1: 'mykey444', param2: 'something else' };
     for (let i = 0; i < 30; i += 1) {
       handlerPromises.push(handler(event2, awsContext()));
     }
-    const event3 = { param1: 'mykey555', param2: 'something else' };
     for (let i = 0; i < 30; i += 1) {
       handlerPromises.push(handler(event3, awsContext()));
     }
-    const event4 = { param1: 'mykey666', param2: 'something else' };
     for (let i = 0; i < 30; i += 1) {
       handlerPromises.push(handler(event4, awsContext()));
     }

@@ -1,3 +1,4 @@
+// needed by local dynamodb
 process.env.AWS_ACCESS_KEY_ID = 'DUMMY';
 process.env.AWS_SECRET_ACCESS_KEY = 'DUMMY';
 

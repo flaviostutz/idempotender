@@ -109,6 +109,8 @@ const core = (config: IdempotenderConfig): Idempotender => {
         },
         cancel: async (): Promise<void> => {
           await deleteExecution(dbKey, config1);
+          status = ExecutionStatus.OPEN;
+          executionOutput = '';
         },
         complete: async (output: string): Promise<void> => {
           await completeExecution(dbKey, output, config1);

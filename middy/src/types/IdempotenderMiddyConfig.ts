@@ -7,4 +7,5 @@ export type IdempotenderMiddyConfig =
     {
         keyJmespath?: string | null;
         keyMapper?: KeyMapperFunction | null;
+        validResponseJmespath?: string | null;
     }

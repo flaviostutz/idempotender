@@ -12,6 +12,10 @@ const jmespathMapper = (query: string) => {
   };
 };
 
+const isReqFromAPIGW = (request:any):boolean => {
+  return request.event.httpMethod;
+};
+
 const middleware = (config: IdempotenderMiddyConfig):
     middy.MiddlewareObj<APIGatewayProxyEvent, APIGatewayProxyResult> => {
 
@@ -27,6 +31,12 @@ const middleware = (config: IdempotenderMiddyConfig):
   }
   if (config.keyJmespath) {
     config.keyMapper = jmespathMapper(config.keyJmespath);
+  }
+
+  if (typeof config.validResponseJmespath === 'undefined') {
+    // will consider always 'valid' if response doesn't have the 'statusCode' attribute,
+    // which is used only when this is used in API Gateways contexts
+    config.validResponseJmespath = "statusCode == undefined || statusCode >= '200' && statusCode < '300'";
   }
 
   const idemCore = idempotenderCore(config);
@@ -57,9 +67,28 @@ const middleware = (config: IdempotenderMiddyConfig):
         const pout = JSON.parse(previousOut);
         // it should return immediatelly to avoid other transformations
         // for other middlewares to take place, because the output
-        // was saved on the first call after other middlewares
+        // was saved after other middlewares
         // already changed the response, so we shoudn't transform again now
-        return Promise.resolve({ ...request.response, ...pout.data });
+        let aresp = {
+          ...request.response,
+          ...pout.data,
+          ...{ idempotencyFrom: pout.ts },
+        };
+
+        // add X-Idempotency-From header if Lambda call came from HTTP call
+        if (isReqFromAPIGW(request)) {
+          if (!aresp.headers) {
+            aresp = { ...aresp, headers: {} };
+          }
+          aresp.headers = {
+            ...aresp.headers,
+            ...{ 'X-Idempotency-From': new Date(pout.ts).toISOString() },
+          };
+        }
+        console.log('>>>>');
+        console.log(JSON.stringify(aresp));
+
+        return Promise.resolve(aresp);
       }
       return Promise.resolve(null);
     }
@@ -79,6 +108,16 @@ const middleware = (config: IdempotenderMiddyConfig):
     return Promise.resolve(undefined);
   };
 
+  const onError: middy.MiddlewareFn = async (request): Promise<any> => {
+    const { execution } = request.internal;
+    if (!execution) {
+      return Promise.resolve(undefined);
+    }
+    const exec = <Execution>execution;
+    await exec.cancel();
+    return Promise.resolve(undefined);
+  };
+
   const after: middy.MiddlewareFn = async (request): Promise<any> => {
     const { execution } = request.internal;
     if (!execution) {
@@ -86,11 +125,41 @@ const middleware = (config: IdempotenderMiddyConfig):
     }
     const exec = <Execution>execution;
 
-    // actual function was executed. save results
+    // actual function was executed
     if (exec.statusOpen()) {
-      // wrap response so it can support null values
+
+      // validate response
+      if (config.validResponseJmespath) {
+        let resp = request.response;
+        if (typeof resp === 'string') {
+          try {
+            resp = JSON.parse(request.response);
+          } catch (err) {
+            // not a valid json. skip checks
+          }
+        }
+        if (typeof resp !== 'object') {
+          resp = null;
+        }
+
+        // only check if response is a json, else, ignore checks
+        if (resp) {
+          const valid = jmespath.search(resp, config.validResponseJmespath);
+          if (typeof valid !== 'boolean') {
+            await exec.cancel();
+            throw new Error("'config.validResponseJmespath' should evaluate to a boolean expression");
+          }
+          if (!valid) {
+            await exec.cancel();
+            return Promise.resolve(undefined);
+          }
+        }
+      }
+
+      // wrap response so it can support null, string or object values
       const output = {
         data: request.response,
+        ts: new Date().getTime(),
       };
       // store response for future calls to the same key
       const outputstr = JSON.stringify(output);
@@ -98,21 +167,6 @@ const middleware = (config: IdempotenderMiddyConfig):
       return Promise.resolve(undefined);
     }
 
-    // sanity check
-    if (!exec.statusCompleted() && !exec.statusLocked()) {
-      throw new Error('Status should be either "complemented" or "locked"');
-    }
-
-    return Promise.resolve(undefined);
-  };
-
-  const onError: middy.MiddlewareFn = async (request): Promise<any> => {
-    const { execution } = request.internal;
-    if (!execution) {
-      return null;
-    }
-    const exec = <Execution>execution;
-    await exec.cancel();
     return Promise.resolve(undefined);
   };
 
