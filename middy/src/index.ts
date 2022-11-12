@@ -33,10 +33,8 @@ const middleware = (config: IdempotenderMiddyConfig):
     config.keyMapper = jmespathMapper(config.keyJmespath);
   }
 
-  if (typeof config.validResponseJmespath === 'undefined') {
-    // will consider always 'valid' if response doesn't have the 'statusCode' attribute,
-    // which is used only when this is used in API Gateways contexts
-    config.validResponseJmespath = "statusCode == undefined || statusCode >= '200' && statusCode < '300'";
+  if (typeof config.markIdempotentResponse === 'undefined') {
+    config.markIdempotentResponse = true;
   }
 
   const idemCore = idempotenderCore(config);
@@ -72,21 +70,26 @@ const middleware = (config: IdempotenderMiddyConfig):
         let aresp = {
           ...request.response,
           ...pout.data,
-          ...{ idempotencyFrom: pout.ts },
         };
 
-        // add X-Idempotency-From header if Lambda call came from HTTP call
-        if (isReqFromAPIGW(request)) {
-          if (!aresp.headers) {
-            aresp = { ...aresp, headers: {} };
-          }
-          aresp.headers = {
-            ...aresp.headers,
-            ...{ 'X-Idempotency-From': new Date(pout.ts).toISOString() },
+        if (config.markIdempotentResponse) {
+          // add response attribute with timestamp the first call was made
+          aresp = {
+            ...aresp,
+            ...{ idempotencyFrom: pout.ts },
           };
+
+          // add X-Idempotency-From header if Lambda call came from HTTP call
+          if (isReqFromAPIGW(request)) {
+            if (!aresp.headers) {
+              aresp = { ...aresp, headers: {} };
+            }
+            aresp.headers = {
+              ...aresp.headers,
+              ...{ 'X-Idempotency-From': new Date(pout.ts).toISOString() },
+            };
+          }
         }
-        console.log('>>>>');
-        console.log(JSON.stringify(aresp));
 
         return Promise.resolve(aresp);
       }
@@ -129,7 +132,12 @@ const middleware = (config: IdempotenderMiddyConfig):
     if (exec.statusOpen()) {
 
       // validate response
-      if (config.validResponseJmespath) {
+      let { validResponseJmespath } = config;
+      if (typeof validResponseJmespath === 'undefined' && isReqFromAPIGW(request)) {
+        validResponseJmespath = 'statusCode >= `200` && statusCode < `300`';
+      }
+
+      if (validResponseJmespath) {
         let resp = request.response;
         if (typeof resp === 'string') {
           try {
@@ -144,7 +152,7 @@ const middleware = (config: IdempotenderMiddyConfig):
 
         // only check if response is a json, else, ignore checks
         if (resp) {
-          const valid = jmespath.search(resp, config.validResponseJmespath);
+          const valid = jmespath.search(resp, validResponseJmespath);
           if (typeof valid !== 'boolean') {
             await exec.cancel();
             throw new Error("'config.validResponseJmespath' should evaluate to a boolean expression");

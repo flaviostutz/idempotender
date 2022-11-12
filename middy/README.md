@@ -147,6 +147,8 @@ const idem = idempotenderMiddy({
   lockAcquireTimeout: 10,
   keyJmespath: null,
   keyMapper: null,
+  markIdempotentResponse: true,
+  validResponseJmespath: "statusCode >= `200` && statusCode < `300`" (if called from API GW)
 }
 ```
 
@@ -273,5 +275,8 @@ See below some sample inputs depending on which service has called Lambda
 
 ## Special behaviors depending on AWS input
 
-- When Lambda was invoked via a AWS API GW in a second time in which the cache was used for idempotency, the http header 'X-Idempotency-From' is added with the timestamp of the first call that actually run the function.
+### When Lambda is invoked via AWS API GW
 
+- The http header 'X-Idempotency-From' is added with the timestamp of the first call that actually run the function whe returning a cache response
+
+- If "validResponseJmespath" config is not defined, it will default to 'statusCode >= `200` && statusCode < `300`', which means responses not in range 2xx won't be saved in idempotency.

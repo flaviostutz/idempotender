@@ -53,6 +53,10 @@ describe('When using default configurations', () => {
     await exec19.cancel();
     const exec29 = await idem.getExecution(`${prefix}:mykey2999`);
     await exec29.cancel();
+    const exec39 = await idem.getExecution(`${prefix}:mykey3999`);
+    await exec39.cancel();
+    const exec49 = await idem.getExecution(`${prefix}:mykey4999`);
+    await exec49.cancel();
   });
 
   it('Jmespath expression should be required', async () => {
@@ -192,6 +196,67 @@ describe('When using default configurations', () => {
     const resp2:any = await handler(event, awsContext());
     expect(resp2.idempotencyFrom).toBeGreaterThan(1000);
     expect(resp2.headers['X-Idempotency-From']).toBeDefined();
+  });
+
+  it('Dont return idempotency marks in responses if configured to', async () => {
+    const handler = middy(async () => {
+      return {
+        body: 'something',
+        statusCode: 201,
+      };
+    });
+
+    handler.use(idempotenderMiddy({
+      keyJmespath: 'param1',
+      markIdempotentResponse: false,
+      // use default validResponseJmespath
+    }));
+
+    const event = {
+      httpMethod: 'GET',
+      param1: 'mykey3999',
+    };
+
+    // first call
+    const resp:any = await handler(event, awsContext());
+    expect(resp.idempotencyFrom).not.toBeDefined();
+    if (resp.headers) {
+      expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
+    }
+
+    // second call
+    const resp2:any = await handler(event, awsContext());
+    expect(resp2.idempotencyFrom).not.toBeDefined();
+    if (resp.headers) {
+      expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
+    }
+  });
+
+  it('Dont save responses with status != 2xx in idempotency (default behavior for API GW calls)', async () => {
+    const handler = middy(async () => {
+      return {
+        body: 'something',
+        statusCode: 404,
+      };
+    });
+
+    handler.use(idempotenderMiddy({
+      keyJmespath: 'param1',
+      // use default validResponseJmespath
+    }));
+
+    const event = {
+      httpMethod: 'GET',
+      param1: 'mykey4999',
+    };
+
+    // first call
+    const resp:any = await handler(event, awsContext());
+    expect(resp.idempotencyFrom).not.toBeDefined();
+
+    // second call
+    const resp2:any = await handler(event, awsContext());
+    expect(resp2.idempotencyFrom).not.toBeDefined();
   });
 
 
