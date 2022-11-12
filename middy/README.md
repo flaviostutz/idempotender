@@ -216,7 +216,7 @@ handler.use(idempotenderMiddy(config)).use(httpErrorHandler()).use(cors());
 
     - If response is a string, Idempotender will try to parse it as json and do the check
 
-    - If not defined, the default expression 'statusCode == undefined || statusCode >= '200' && statusCode < '300'' is used, which is useful in most REST API scenarios.
+    - If not defined and called from API GW, defaults to 'statusCode >= \`200\` && statusCode < \`300'\`'
 
   - **keyHash**
 
@@ -276,4 +276,4 @@ See below some sample inputs depending on which service has called Lambda
 
 - The http header 'X-Idempotency-From' is added with the timestamp of the first call that actually run the function whe returning a cache response
 
-- If "validResponseJmespath" config is not defined, it will default to 'statusCode >= `200` && statusCode < `300`', which means responses not in range 2xx won't be saved in idempotency.
+- If "validResponseJmespath" config is not defined, it will default to 'statusCode >= \`200\` && statusCode < \`300\`', which means responses not in range 2xx won't be saved in idempotency.
