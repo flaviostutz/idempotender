@@ -13,7 +13,6 @@ jobs:
       tooling: node
       tooling-version: 16
       tooling-cache: yarn
-      git-base-head: true
       target-build: true
       target-lint: true
       target-unit-tests: true
