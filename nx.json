@@ -4,16 +4,16 @@
       "runner": "nx/tasks-runners/default",
       "options": {
         "cacheableOperations": [
-          "build",
+          "build-module",
           "test"
         ]
       }
     }
   },
   "targetDefaults": {
-    "build": {
+    "build-module": {
       "dependsOn": [
-        "^build"
+        "^build-module"
       ],
       "outputs": [
         "{projectRoot}/dist"

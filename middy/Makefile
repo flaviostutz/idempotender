@@ -1,5 +1,10 @@
 build:
 	yarn install --frozen-lockfile
+	# NX will trigger build of all modules this module depends on
+	npx nx run build-module --verbose
+
+build-module:
+	yarn install --frozen-lockfile
 	rm -rf dist
 	npx esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
 	npx tsc --emitDeclarationOnly --outDir dist
@@ -22,3 +27,7 @@ publish:
 	npm publish
 
 all: build lint test
+
+clean:
+	rm -rf node_modules
+	rm -rf dist

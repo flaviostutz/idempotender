@@ -6,3 +6,7 @@
 	yarn install
 	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD
 
+clean:
+	npx nx run-many --target=clean
+	rm -rf node_modules
+
