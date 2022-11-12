@@ -4,5 +4,5 @@
 # if you create a specific target, it will be preferred to this generic rule
 %:
 	yarn install
-	npx nx affected --target=$@
+	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD
 
