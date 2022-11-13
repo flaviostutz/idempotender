@@ -4,15 +4,16 @@
 # if you create a specific target, it will be preferred to this generic rule
 %:
 	yarn install
-	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD --verbose
+	rm -rf /tmp/dynamodb-local
+	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD --verbose --output-style=stream
 
 build:
 	yarn install
-	npx nx affected --target=build-module --base=$$NX_BASE --head=$$NX_HEAD --verbose
+	npx nx affected --target=build-module --base=$$NX_BASE --head=$$NX_HEAD --verbose --output-style=stream
 
 build-all:
 	yarn install
-	npx nx run-many --target=build-module --verbose
+	npx nx run-many --target=build-module --verbose --output-style=stream
 
 clean:
 	npx nx run-many --target=clean
