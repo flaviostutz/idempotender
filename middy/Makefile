@@ -23,7 +23,8 @@ unit-tests:
 	npx jest --verbose
 
 publish:
-	echo "!!!!!$$NODE_AUTH_TOKEN"
+	echo ">>>>>>> $$NODE_AUTH_TOKEN <<<<<<"
+	yarn config set 'npmRegistries["//registry.npmjs.org"].npmAuthToken' "$$NODE_AUTH_TOKEN"
 	git config --global user.email "flaviostutz@gmail.com"
 	git config --global user.name "Flávio Stutz"
 	npm version from-git
