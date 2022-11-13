@@ -21,5 +21,8 @@ clean:
 	npx nx run-many --target=clean
 	rm -rf node_modules
 
+publish-npm:
+	npx nx affected --target=publish-npm --parallel=1 --base=$$NX_BASE --head=$$NX_HEAD --verbose --output-style=stream
+
 # run everything from scratch (similar to CI)
 all: clean build lint unit-tests
