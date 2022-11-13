@@ -25,8 +25,8 @@ unit-tests:
 publish:
 	git config --global user.email "flaviostutz@gmail.com"
 	git config --global user.name "Flávio Stutz"
-	npm version from-git
-	npm publish
+	npm version from-git --no-git-tag-version
+	yarn publish
 
 all: build lint test
 
