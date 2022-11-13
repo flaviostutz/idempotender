@@ -6,7 +6,6 @@ build:
 
 # Build only this module (without dependencies)
 build-module:
-	pwd
 	yarn install --frozen-lockfile
 	rm -rf dist
 	npx esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
@@ -21,7 +20,7 @@ lint:
 test: unit-tests
 
 unit-tests:
-	yarn test
+	npx jest
 
 publish:
 	git config --global user.email "flaviostutz@gmail.com"

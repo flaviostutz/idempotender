@@ -19,7 +19,7 @@ lint:
 test: unit-tests
 
 unit-tests:
-	yarn test
+	npx jest
 
 publish:
 	git config --global user.email "flaviostutz@gmail.com"
