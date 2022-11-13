@@ -1,6 +1,6 @@
 build:
 	yarn install --frozen-lockfile
-	# NX will trigger build of all modules this module depends on
+	# NX will trigger build-module of all modules this module depends on
 	npx nx run build-module --verbose
 
 build-module:

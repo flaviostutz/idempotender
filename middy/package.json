@@ -12,9 +12,7 @@
   },
   "scripts": {
     "build": "make build",
-    "build-module": "make build-module",
-    "test": "jest",
-    "clean": "make clean"
+    "test": "make test"
   },
   "repository": {
     "type": "git",

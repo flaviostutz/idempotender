@@ -3,29 +3,39 @@
     "default": {
       "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": [
-          "build-module",
-          "test"
-        ]
+        "cacheableOperations": [ "build-module", "test" ]
       }
     }
   },
   "targetDefaults": {
     "build-module": {
-      "dependsOn": [
-        "^build-module"
-      ],
-      "outputs": [
-        "{projectRoot}/dist"
-      ]
+      "dependsOn": [ "^build-module" ],
+      "outputs": [ "{projectRoot}/dist" ]
     },
-    "test": {
-      "dependsOn": [
-        "^test"
-      ],
-      "outputs": [
-        "{projectRoot}/coverage"
-      ]
+    "unit-tests": {
+      "outputs": [ "{projectRoot}/coverage" ]
+    }
+  },
+  "targets": {
+    "build-module": {
+      "executor": "nx:run-commands",
+      "options": { "commands": [{ "command": "make build-module" }] }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": { "commands": [{ "command": "make lint" }] }
+    },
+    "unit-tests": {
+      "executor": "nx:run-commands",
+      "options": { "commands": [{ "command": "make unit-tests" }] }
+    },
+    "publish": {
+      "executor": "nx:run-commands",
+      "options": { "commands": [{ "command": "make publish" }] }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": { "commands": [{ "command": "make clean" }] }
     }
   },
   "defaultBase": "main"
