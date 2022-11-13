@@ -2,8 +2,9 @@
 
 TODO
 
-[ ] migrate to Yarn 3
-[ ] configure NX
+[X] migrate to Yarn 3
+[X] configure NX
+[ ] use dynalite for dynamodb testing
 [ ] publish pakages by tagging
 [ ] document complete example
 

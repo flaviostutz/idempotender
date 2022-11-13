@@ -4,7 +4,7 @@ process.env.AWS_SECRET_ACCESS_KEY = 'DUMMY';
 
 // eslint-disable-next-line import/no-commonjs
 module.exports = {
-  preset: '@shelf/jest-dynamodb',
+  preset: 'jest-dynalite',
   testMatch: ['**/?(*.)+(spec|test).+(ts|tsx|js)'],
   transform: {
     '^.+\\.(tsx?|json?)$': [

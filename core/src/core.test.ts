@@ -4,35 +4,23 @@ import { setDynamoDBClient, deleteExecution } from './db';
 import { core } from './core';
 import { sleep } from './utils';
 
-describe('when using core with custom configurations', () => {
-  beforeAll(async () => {
-    const config = { dynamoDBTableName: 'IdempotencyExecutions' };
-    const ddbclient = new DynamoDBClient({
-      endpoint: 'http://localhost:8000',
-      region: 'local-env',
-    });
-    setDynamoDBClient(ddbclient);
-    await deleteExecution('1123', config);
-    await deleteExecution('2123', config);
-    await deleteExecution('3123', config);
-    await deleteExecution('4123', config);
-    await deleteExecution('5123', config);
-    await deleteExecution('6123', config);
-    await deleteExecution('7123', config);
-    await deleteExecution('8123', config);
-    await deleteExecution('9123', config);
-    await deleteExecution('10123', config);
-    await deleteExecution('11123', config);
-    await deleteExecution('h2123', config);
-  });
+const config = { dynamoDBTableName: 'IdempotencyExecutions' };
+const ddbclient = new DynamoDBClient({
+  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+  region: 'local',
+});
+setDynamoDBClient(ddbclient);
 
+describe('when using core with custom configurations', () => {
   it('get inexistant execution should lead to "open" state', async () => {
+    await deleteExecution('1123', config);
     const idem = core({});
     const res = await idem.getExecution('1123');
     expect(res.statusOpen()).toBeTruthy();
   });
 
   it('save execution should lead to "completed" state', async () => {
+    await deleteExecution('2123', config);
     const idem = core({});
     const res = await idem.getExecution('2123');
     await res.complete('test');
@@ -53,6 +41,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('save execution should lead to "completed" state even if not using hash', async () => {
+    await deleteExecution('h2123', config);
     const idem = core({ keyHash: false });
     const res = await idem.getExecution('h2123');
     await res.complete('test');
@@ -62,6 +51,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('cancel execution should lead to "open" state in subsequent calls', async () => {
+    await deleteExecution('3123', config);
     const idem = core({});
 
     const res = await idem.getExecution('3123');
@@ -75,6 +65,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('acquire lock should lead to "locked" state in parallel calls after timeout', async () => {
+    await deleteExecution('4123', config);
     const idem = core({
       lockTTL: 2,
       lockAcquireTimeout: 1,
@@ -90,6 +81,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "completed" if first client resolves it under the lockAcquireTimeout time', async () => {
+    await deleteExecution('5123', config);
     const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
@@ -113,6 +105,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "open" if first client cancels it under the lockAcquireTimeout time', async () => {
+    await deleteExecution('6123', config);
     const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
@@ -135,6 +128,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('"completed" execution should be back to "open" after execution expiration time', async () => {
+    await deleteExecution('7123', config);
     const idem = core({
       lockTTL: 0.5,
       lockAcquireTimeout: 0.4,
@@ -155,6 +149,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('"locked" execution should be back to "open" after lock expiration time', async () => {
+    await deleteExecution('8123', config);
     const idem = core({
       lockTTL: 1.1,
       lockAcquireTimeout: 0.3,
@@ -174,6 +169,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('lock shouldnt be acquired if lockEnable==false in config', async () => {
+    await deleteExecution('9123', config);
     const idem = core({
       lockEnable: false,
     });
@@ -189,6 +185,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('second client should see "complete" status after first client "completes" it when not using locks', async () => {
+    await deleteExecution('10123', config);
     const idem = core({
       lockEnable: false,
     });
@@ -205,6 +202,7 @@ describe('when using core with custom configurations', () => {
   });
 
   it('when two clients run in parallel, the later writer whould overwrite the first when no lock is used', async () => {
+    await deleteExecution('11123', config);
     const idem = core({
       lockEnable: false,
     });

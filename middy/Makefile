@@ -2,7 +2,7 @@
 build:
 	yarn install --frozen-lockfile
 	# NX will trigger build of all modules this module depends on
-	npx nx run build-module --verbose
+	npx nx run build-module --verbose --output-style=stream
 
 # Build only this module (without dependencies)
 build-module:
@@ -20,7 +20,7 @@ lint:
 test: unit-tests
 
 unit-tests:
-	npx jest
+	npx jest --verbose
 
 publish:
 	git config --global user.email "flaviostutz@gmail.com"

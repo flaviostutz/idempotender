@@ -53,4 +53,3 @@ const sleep = async (ms: number): Promise<void> => {
 };
 
 export { dynamoToExecutionData, executionDataToDynamo, getExecutionStatus, sleep };
-

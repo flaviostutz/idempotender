@@ -7,4 +7,5 @@ module.exports = {
       ProvisionedThroughput: { ReadCapacityUnits: 1, WriteCapacityUnits: 1 },
     },
   ],
+  basePort: 8000,
 };

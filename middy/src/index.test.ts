@@ -5,13 +5,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import idempotender, { setDynamoDBClient } from 'idempotender-core';
 
 import { awsContext } from './__mock__/awsContext';
-// import { awsAPIProxyRequest } from './__mock__/awsRequest';
 
 import idempotenderMiddy from './index';
-
-// const sleep = async (ms: number): Promise<void> => {
-//   return new Promise((resolve) => setTimeout(resolve, ms));
-// };
 
 const prefix = awsContext().invokedFunctionArn.split(':')[4];
 const idem = idempotender({ lockAcquireTimeout: 1, lockTTL: 2 });
@@ -20,19 +15,14 @@ const randomInt = (): number => {
   return Math.floor(Math.random() * 999999);
 };
 
+const ddbclient = new DynamoDBClient({
+  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+  region: 'local',
+});
+setDynamoDBClient(ddbclient);
+
 describe('When using default configurations', () => {
   beforeAll(async () => {
-    const ddbclient = new DynamoDBClient({
-      endpoint: 'http://localhost:8000',
-      region: 'local-env',
-      credentials: {
-        accessKeyId: 'dummyAccessKey',
-        secretAccessKey: 'dummySecretKey',
-      },
-    });
-    setDynamoDBClient(ddbclient);
-    const exec1 = await idem.getExecution(`${prefix}:mykey111`);
-    await exec1.cancel();
     const exec2 = await idem.getExecution(`${prefix}:mykey222`);
     await exec2.cancel();
     const exec3 = await idem.getExecution(`${prefix}:mykey333`);
@@ -89,6 +79,7 @@ describe('When using default configurations', () => {
   });
 
   it('Single call with idempotency control should work', async () => {
+    await cancelExec('mykey111');
     let runCount = 0;
     const handler = middy(async (request: any) => {
       runCount += 1;
@@ -107,6 +98,7 @@ describe('When using default configurations', () => {
   });
 
   it('Dont save idempotency for invalid responses', async () => {
+    await cancelExec('mykey999');
     const handler = middy(async (request: any) => {
       return {
         key: request.param2,
@@ -132,6 +124,7 @@ describe('When using default configurations', () => {
   });
 
   it('Save idempotency for valid responses', async () => {
+    await cancelExec('mykey1999');
     const handler = middy(async (request: any) => {
       return {
         key: request.param2,
@@ -167,6 +160,7 @@ describe('When using default configurations', () => {
   });
 
   it('Return X-Idempotency-From when called via API GW with default resp validator', async () => {
+    await cancelExec('mykey2999');
     const handler = middy(async () => {
       return {
         body: 'something',
@@ -200,6 +194,7 @@ describe('When using default configurations', () => {
   });
 
   it('Dont return idempotency marks in responses if configured to', async () => {
+    await cancelExec('mykey3999');
     const handler = middy(async () => {
       return {
         body: 'something',
@@ -236,6 +231,7 @@ describe('When using default configurations', () => {
   });
 
   it('Dont save responses with status != 2xx in idempotency (default behavior for API GW calls)', async () => {
+    await cancelExec('mykey4999');
     const handler = middy(async () => {
       return {
         body: 'something',
@@ -265,6 +261,7 @@ describe('When using default configurations', () => {
   });
 
   it('If handler throws an exception, idempotency should be canceled', async () => {
+    await cancelExec('mykey777');
     let runCount = 0;
     const handler = middy(async () => {
       runCount += 1;
@@ -287,6 +284,7 @@ describe('When using default configurations', () => {
   });
 
   it('If handler throws an exception, idempotency should be canceled, even if another middleware changes the response "onError"', async () => {
+    await cancelExec('mykey888');
     let runCount = 0;
     const handler = middy(async (): Promise<any> => {
       runCount += 1;
@@ -321,6 +319,7 @@ describe('When using default configurations', () => {
   });
 
   it('Multiple calls with the same input should return same result without running twice', async () => {
+    await cancelExec('mykey222');
     let runCount = 0;
     const handler = middy(async (request: any) => {
       runCount += 1;
@@ -350,6 +349,10 @@ describe('When using default configurations', () => {
   });
 
   it('Multiple concurrent calls gets locks, completes and resolve successfully', async () => {
+    await cancelExec('mykey333');
+    await cancelExec('mykey444');
+    await cancelExec('mykey555');
+    await cancelExec('mykey666');
     let runCount = 0;
     let runAfterCount = 0;
     let runBeforeCount = 0;
@@ -413,3 +416,8 @@ describe('When using default configurations', () => {
     expect(respCount).toEqual(4);
   });
 });
+
+const cancelExec = async (id: string): Promise<void> => {
+  const exec1 = await idem.getExecution(`${prefix}:${id}`);
+  await exec1.cancel();
+};
