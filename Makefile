@@ -4,11 +4,16 @@
 # if you create a specific target, it will be preferred to this generic rule
 %:
 	yarn install
-	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD
+	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD  --verbose
 
 build:
+	pwd
 	yarn install
-	npx nx affected --target=build-module --base=$$NX_BASE --head=$$NX_HEAD
+	npx nx affected --target=build-module --base=$$NX_BASE --head=$$NX_HEAD  --verbose
+
+build-all:
+	yarn install
+	npx nx run-many --target=build-module --verbose
 
 clean:
 	npx nx run-many --target=clean

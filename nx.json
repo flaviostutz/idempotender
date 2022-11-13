@@ -3,7 +3,7 @@
     "default": {
       "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": [ "build-module", "test" ]
+        "cacheableOperations": [ "build-module", "unit-tests" ]
       }
     }
   },
@@ -14,28 +14,6 @@
     },
     "unit-tests": {
       "outputs": [ "{projectRoot}/coverage" ]
-    }
-  },
-  "targets": {
-    "build-module": {
-      "executor": "nx:run-commands",
-      "options": { "commands": [{ "command": "make build-module" }] }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": { "commands": [{ "command": "make lint" }] }
-    },
-    "unit-tests": {
-      "executor": "nx:run-commands",
-      "options": { "commands": [{ "command": "make unit-tests" }] }
-    },
-    "publish": {
-      "executor": "nx:run-commands",
-      "options": { "commands": [{ "command": "make publish" }] }
-    },
-    "clean": {
-      "executor": "nx:run-commands",
-      "options": { "commands": [{ "command": "make clean" }] }
     }
   },
   "defaultBase": "main"

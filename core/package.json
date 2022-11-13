@@ -13,7 +13,10 @@
   "scripts": {
     "build": "make build",
     "build-module": "make build-module",
-    "test": "jest",
+    "unit-tests": "make unit-tests",
+    "lint": "make lint",
+    "publish": "make publish",
+    "test": "make unit-tests",
     "clean": "make clean"
   },
   "repository": {

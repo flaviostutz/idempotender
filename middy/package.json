@@ -12,7 +12,12 @@
   },
   "scripts": {
     "build": "make build",
-    "test": "make test"
+    "build-module": "make build-module",
+    "unit-tests": "make unit-tests",
+    "lint": "make lint",
+    "publish": "make publish",
+    "test": "make unit-tests",
+    "clean": "make clean"
   },
   "repository": {
     "type": "git",

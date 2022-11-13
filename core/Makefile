@@ -1,8 +1,9 @@
+# Build this module and all its dependencies
 build:
 	yarn install --frozen-lockfile
-	# NX will trigger build-module of all modules this module depends on
 	npx nx run build-module --verbose
 
+# Build only this module (without dependencies)
 build-module:
 	yarn install --frozen-lockfile
 	rm -rf dist
@@ -31,3 +32,4 @@ all: build lint test
 clean:
 	rm -rf node_modules
 	rm -rf dist
+
