@@ -26,9 +26,7 @@ publish:
 	git config --global user.name "Flávio Stutz"
 	npm version from-git --no-git-tag-version
 	echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-	echo ">>>>"
-	cat .npmrc
-	npm publish --no-workspaces
+	yarn publish
 
 all: build lint test
 
