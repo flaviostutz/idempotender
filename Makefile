@@ -3,11 +3,12 @@
 # e.g: "make whatever" runs the "whatever" target on affected modules, if configured
 # if you create a specific target, it will be preferred to this generic rule
 %:
+	echo "><><><$$NODE_AUTH_TOKEN"
 	yarn install
 	rm -rf /tmp/dynamodb-local
 	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD --verbose --output-style=stream
 
-# Run build on all affected modules
+# Run build only on affected modules
 build:
 	yarn install
 	npx nx affected --target=build-module --base=$$NX_BASE --head=$$NX_HEAD --verbose --output-style=stream
