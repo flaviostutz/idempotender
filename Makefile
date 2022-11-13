@@ -4,6 +4,8 @@
 # if you create a specific target, it will be preferred to this generic rule
 %:
 	yarn install
+	echo "$$NX_BASE"
+	echo "$$NX_HEAD"
 	npx nx affected --target=$@ --base=$$NX_BASE --head=$$NX_HEAD
 
 clean:
