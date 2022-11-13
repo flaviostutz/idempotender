@@ -34,7 +34,7 @@ jobs:
           cache: yarn
       - run: make build
         working-directory: ./
-      - run: make publish
+      - run: make publish-npm
         working-directory: ./
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

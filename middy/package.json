@@ -15,7 +15,7 @@
     "build-module": "make build-module",
     "unit-tests": "make unit-tests",
     "lint": "make lint",
-    "publish": "make publish",
+    "publish-npm": "make publish",
     "test": "make unit-tests",
     "clean": "make clean"
   },
