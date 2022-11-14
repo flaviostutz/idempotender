@@ -13,7 +13,7 @@ The overall steps that this middlware performs are:
 
 ## Usage
 
-- `npm install --save idempotender-middy`
+- `npm install --save @idempotender/middy`
 
 - Create DynamoDB table with structure:
 
@@ -40,7 +40,7 @@ Resources:
 - Create Lambda function
 
 ```js
-import idempotenderMiddy from 'idempotender-middy';
+import idempotenderMiddy from '@idempotender/middy';
 
 const handler = middy((event, context) => {
   console.log(`Running for '${event.param1}' on ${new Date()}`);
@@ -63,7 +63,7 @@ handler.use(
 - Create AWS Lambda function exposed through AWS API Gateway
 
 ```js
-import idempotenderMiddy from 'idempotender-middy';
+import idempotenderMiddy from '@idempotender/middy';
 
 const handler = middy((event, context) => {
   console.log('Will only execute this once for the same URL method + path + body contents');
@@ -88,7 +88,7 @@ handler.use(
 - Create AWS Lambda function exposed through AWS API Gateway
 
 ```js
-import idempotenderMiddy from 'idempotender-middy';
+import idempotenderMiddy from '@idempotender/middy';
 
 const handler = middy((event, context) => {
   console.log('Will only execute this once per "Idempotency-Key" header value');

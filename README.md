@@ -27,12 +27,12 @@ We are Typescript friendly :)
 
 - In this example, we will use the header 'Idempotency-Key' from rest request as the key of idempotency (as [Stripe does](https://stripe.com/docs/api/idempotent_requests) in its api)
 
-- `npm install --save idempotender-middy`
+- `npm install --save @idempotender/middy`
 
 - Create AWS Lambda function exposed through AWS API Gateway and use the Middy middlware
 
 ```js
-import idempotenderMiddy from 'idempotender-middy';
+import idempotenderMiddy from '@idempotender/middy';
 
 const handler = middy((event, context) => {
   console.log('Will only execute this once per idempotence key!');

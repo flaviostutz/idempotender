@@ -6,10 +6,10 @@ It is able to acquire a lock for an execution to prevent concurrency situations,
 
 ## Usage
 
-- `npm install --save idempotender-core`
+- `npm install --save @idempotender/core`
 
 ```js
-import idempotender from 'idempotender-core';
+import idempotender from '@idempotender/core';
 ```
 
 - Create DynamoDB table with structure:
@@ -32,7 +32,7 @@ Resources:
 
 ### Example: Simplest form
 
-- `npm install --save idempotender-core`
+- `npm install --save @idempotender/core`
 
 - Create function
 
