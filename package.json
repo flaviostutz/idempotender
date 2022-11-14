@@ -3,7 +3,8 @@
   "name": "idempotender",
   "workspaces": [
     "core",
-    "middy"
+    "middy",
+    "examples/random-generator-lambda"
   ],
   "packageManager": "yarn@3.2.4",
   "devDependencies": {

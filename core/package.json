@@ -31,6 +31,7 @@
   "homepage": "https://github.com/flaviostutz/idempotender#readme",
   "devDependencies": {
     "@shopify/eslint-plugin": "^42.0.1",
+    "@stutzlab/eslint-config": "^0.0.5",
     "@types/diff": "^5.0.2",
     "@types/jest": "^29.1.2",
     "@types/js-yaml": "^4.0.5",

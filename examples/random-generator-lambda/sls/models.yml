@@ -1,0 +1,145 @@
+- name: errorResponse
+  # description: "This is an error"
+  contentType: "application/json"
+  schema:
+    $schema: "http://json-schema.org/draft-04/schema#"
+    properties:
+      code:
+        type: number
+      message:
+        type: string
+
+- name: randomNumberResponse
+  description: "Generated random number"
+  contentType: "application/json"
+  schema:
+    $schema: "http://json-schema.org/draft-04/schema#"
+    properties:
+      number:
+        type: number
+      timestamp:
+        type: string
+
+- name: randomUserResponse
+  description: "Generated random user list"
+  contentType: "application/json"
+  schema:
+    $schema: "http://json-schema.org/draft-04/schema#"
+    # https://bikcrum.github.io/Swagger-JSON-Schema-In-YAML_webversion/
+    type: object
+    properties:
+      results:
+        type: array
+        items:
+          type: object
+          properties:
+            gender:
+              type: string
+            name:
+              type: object
+              properties:
+                title:
+                  type: string
+                first:
+                  type: string
+                last:
+                  type: string
+            location:
+              type: object
+              properties:
+                street:
+                  type: object
+                  properties:
+                    number:
+                      type: number
+                    name:
+                      type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                country:
+                  type: string
+                postcode:
+                  type: string
+                coordinates:
+                  type: object
+                  properties:
+                    latitude:
+                      type: string
+                    longitude:
+                      type: string
+                timezone:
+                  type: object
+                  properties:
+                    offset:
+                      type: string
+                    description:
+                      type: string
+            email:
+              type: string
+            login:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                salt:
+                  type: string
+                md5:
+                  type: string
+                sha1:
+                  type: string
+                sha256:
+                  type: string
+            dob:
+              type: object
+              properties:
+                date:
+                  type: string
+                age:
+                  type: number
+            registered:
+              type: object
+              properties:
+                date:
+                  type: string
+                age:
+                  type: number
+            phone:
+              type: string
+            cell:
+              type: string
+            id:
+              type: object
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+            picture:
+              type: object
+              properties:
+                large:
+                  type: string
+                medium:
+                  type: string
+                thumbnail:
+                  type: string
+            nat:
+              type: string
+      info:
+        type: object
+        properties:
+          seed:
+            type: string
+          results:
+            type: number
+          page:
+            type: number
+          version:
+            type: string
+
