@@ -4,27 +4,34 @@ import { AttributeValue } from '@aws-sdk/client-dynamodb';
 import { ExecutionData } from './types/ExecutionData';
 import { ExecutionStatus } from './types/ExecutionStatus';
 
-const dynamoToExecutionData = (item: Record<string, AttributeValue>): ExecutionData => {
+const dynamoToExecutionData = <T>(item: Record<string, AttributeValue>): ExecutionData<T> => {
+  const outputstr = item.outputValue.S || '';
+  const eoutput = JSON.parse(outputstr);
+
   return {
     key: item.Id.S || '',
     lockTTL: item.lockTTL.N ? parseInt(item.lockTTL.N, 10) : 0,
     executionTTL: item.executionTTL.N ? parseInt(item.executionTTL.N, 10) : 0,
     outputSaved: item.outputSaved.BOOL || false,
-    outputValue: item.outputValue.S || '',
+    outputValue: eoutput,
   };
 };
+const executionDataToDynamo = <T>(
+  executionData: ExecutionData<T>,
+): Record<string, AttributeValue> => {
+  // wrap output object so any content type can be saved
+  const outputstr = JSON.stringify(executionData.outputValue);
 
-const executionDataToDynamo = (executionData: ExecutionData): Record<string, AttributeValue> => {
   return {
     Id: { S: executionData.key },
     lockTTL: { N: `${executionData.lockTTL}` },
     executionTTL: { N: `${executionData.executionTTL}` },
     outputSaved: { BOOL: executionData.outputSaved },
-    outputValue: { S: executionData.outputValue },
+    outputValue: { S: outputstr },
   };
 };
 
-const getExecutionStatus = (executionData: ExecutionData | null): ExecutionStatus => {
+const getExecutionStatus = <T>(executionData: ExecutionData<T> | null): ExecutionStatus => {
   if (!executionData) {
     return ExecutionStatus.OPEN;
   }

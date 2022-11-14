@@ -1,7 +1,9 @@
-export type ExecutionData = {
+import { ExecutionOutput } from './ExecutionOutput';
+
+export type ExecutionData<T> = {
   key: string;
   lockTTL: number;
   executionTTL: number;
   outputSaved: boolean;
-  outputValue: string;
+  outputValue: ExecutionOutput<T>;
 };

@@ -1,4 +1,4 @@
-import { IdempotenderConfig } from 'idempotender-core';
+import { IdempotenderConfig } from '@idempotender/core';
 
 import { KeyMapperFunction } from './KeyMapperFunction';
 

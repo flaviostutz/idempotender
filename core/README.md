@@ -30,30 +30,53 @@ Resources:
         Enabled: true
 ```
 
-### Example: As lib in NodeJS
-
-- In this example, the function calls explicitely the idempotency utility, and will use a custom mapper to transform the input key to the key used in database
-
-- It will deactivate the hashing mechanism, so in the database you can see the actual contents of param1:param2 and there is no chance of collision.
+### Example: Simplest form
 
 - `npm install --save idempotender-core`
 
 - Create function
 
 ```js
-import idempotender from 'idempotender-core';
+import idempotender from '@idempotender/core';
+
+function myIdempotentFunction(param1: string, param2: string): string {
+
+  const out1 = await withIdempotency(():string => {
+    return `First run at ${new Date()}`;
+  }, `${param1}:${param2}`);
+
+  // DO BUSINESS HERE
+  try {
+    console.log(`I only hello world for (${param1},${param2}) once!`);
+    const output = `This is output '${param1}${param2}' at ${new Date()}`;
+  } catch (err) {
+    console.log('Error during function execution');
+    idem.cancel(execution.key);
+  }
+}
+```
+
+### Example: Using more advanced options of the API
+
+- It will deactivate the hashing mechanism, so in the database you can see the actual contents of param1:param2 and there is no chance of collision.
+
+- `npm install --save @idempotender/core`
+
+- Create function
+
+```js
+import idempotender from '@idempotender/core';
 
 const idem = idempotender({
   executionTTL: 24 * 3600,
   dynamoDBTableName: 'IdempotencyExecutions',
-  keyMapper: (key) => `${key.param1}:${key.param2}`,
   keyHash: false,
 });
 
 function myIdempotentFunction(param1: string, param2: string): string {
   // get current idempotency status
   // acquire lock to avoid concurrent calls to this function
-  const execution = idem.getExecution({ param1, param2 });
+  const execution = await idem.getExecution(`${param1}:${param2}`);
   // already processed before, so return previous output data response
   if (execution.statusCompleted()) {
     return execution.output();
@@ -63,6 +86,7 @@ function myIdempotentFunction(param1: string, param2: string): string {
     throw new Error(`Concurrent processing for idempotency key ${execution.key}`);
   }
 
+  // status is "open", so
   // DO BUSINESS HERE
   try {
     console.log(`I only hello world for (${param1},${param2}) once!`);

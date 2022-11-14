@@ -9,7 +9,7 @@ describe('utils', () => {
         executionTTL: nowEpoch() + 1000,
         lockTTL: nowEpoch() + 100,
         outputSaved: false,
-        outputValue: '',
+        outputValue: { data: '', ts: 0 },
       }),
     ).toBe(ExecutionStatus.LOCKED);
   });
@@ -21,7 +21,7 @@ describe('utils', () => {
         executionTTL: nowEpoch() - 1000,
         lockTTL: nowEpoch() - 100,
         outputSaved: false,
-        outputValue: '',
+        outputValue: { data: '', ts: 0 },
       }),
     ).toBe(ExecutionStatus.OPEN);
   });
@@ -33,7 +33,7 @@ describe('utils', () => {
         executionTTL: nowEpoch() + 1000,
         lockTTL: 0,
         outputSaved: false,
-        outputValue: '',
+        outputValue: { data: '', ts: 0 },
       }),
     ).toBe(ExecutionStatus.OPEN);
   });
@@ -45,7 +45,7 @@ describe('utils', () => {
         executionTTL: nowEpoch() + 1000,
         lockTTL: 0,
         outputSaved: true,
-        outputValue: '',
+        outputValue: { data: '', ts: 0 },
       }),
     ).toBe(ExecutionStatus.COMPLETED);
   });
@@ -56,7 +56,7 @@ describe('utils', () => {
       executionTTL: nowEpoch() + 1000,
       lockTTL: nowEpoch() + 0.5,
       outputSaved: false,
-      outputValue: '',
+      outputValue: { data: '', ts: 0 },
     };
     expect(getExecutionStatus(ex)).toBe(ExecutionStatus.LOCKED);
     await sleep(600);
@@ -69,7 +69,7 @@ describe('utils', () => {
       executionTTL: nowEpoch() + 0.5,
       lockTTL: 0,
       outputSaved: true,
-      outputValue: 'bbb',
+      outputValue: { data: 'bbb', ts: 123 },
     };
     expect(getExecutionStatus(ex)).toBe(ExecutionStatus.COMPLETED);
     await sleep(600);

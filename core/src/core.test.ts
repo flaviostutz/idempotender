@@ -14,7 +14,7 @@ setDynamoDBClient(ddbclient);
 describe('when using core with custom configurations', () => {
   it('get inexistant execution should lead to "open" state', async () => {
     await deleteExecution('1123', config);
-    const idem = core({});
+    const idem = core<string>({});
     const res = await idem.getExecution('1123');
     expect(res.statusOpen()).toBeTruthy();
   });
@@ -101,7 +101,7 @@ describe('when using core with custom configurations', () => {
     // return gracefully with the newer state set by the first process
     const res2 = await idem.getExecution('5123');
     expect(res2.statusCompleted()).toBeTruthy();
-    expect(res2.output()).toEqual('test2');
+    expect(res2.output().data).toEqual('test2');
   });
 
   it('second acquire lock should resolve to "open" if first client cancels it under the lockAcquireTimeout time', async () => {
@@ -198,7 +198,7 @@ describe('when using core with custom configurations', () => {
 
     const res2 = await idem.getExecution('10123');
     expect(res2.statusCompleted()).toBeTruthy();
-    expect(res2.output()).toEqual('res1value');
+    expect(res2.output().data).toEqual('res1value');
   });
 
   it('when two clients run in parallel, the later writer whould overwrite the first when no lock is used', async () => {
@@ -226,6 +226,6 @@ describe('when using core with custom configurations', () => {
     // the final state contains data from the second client
     const res3 = await idem.getExecution('11123');
     expect(res3.statusCompleted()).toBeTruthy();
-    expect(res3.output()).toEqual('res2value');
+    expect(res3.output().data).toEqual('res2value');
   });
 });

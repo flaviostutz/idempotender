@@ -1,5 +1,5 @@
 {
-  "name": "idempotender-core",
+  "name": "@idempotender/core",
   "version": "0.0.1",
   "description": "A Javascript library for idempotency control based on DynamoDB",
   "main": "dist/index.js",

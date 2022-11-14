@@ -2,6 +2,7 @@ import crypto from 'crypto';
 
 import { fetchExecution, lockAcquire, deleteExecution, completeExecution } from './db';
 import { Execution } from './types/Execution';
+import { ExecutionOutput } from './types/ExecutionOutput';
 import { ExecutionStatus } from './types/ExecutionStatus';
 import { Idempotender } from './types/Idempotender';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
@@ -17,10 +18,12 @@ const defaultConfig: IdempotenderConfig = {
 };
 
 /**
- * Configure Idempotender
+ * Call this function passing config to start using Idempotender.
+ * Pass a generics type while calling the function to type the
+ * execution output for your specific case
  * @param config Configuration parameters
  */
-const core = (config: IdempotenderConfig): Idempotender => {
+const core = <T>(config: IdempotenderConfig): Idempotender<T> => {
   const config1 = { ...defaultConfig, ...config };
   if (!config1.lockTTL) {
     throw new Error('Config: lockTTL is required');
@@ -40,7 +43,7 @@ const core = (config: IdempotenderConfig): Idempotender => {
   }
 
   return {
-    getExecution: async (key: string): Promise<Execution> => {
+    getExecution: async (key: string): Promise<Execution<T>> => {
       let dbKey = key;
 
       if (config1.keyHash) {
@@ -52,7 +55,7 @@ const core = (config: IdempotenderConfig): Idempotender => {
       // determine status of execution
       let status = ExecutionStatus.OPEN;
       let lockAcquired = false;
-      let executionOutput: string;
+      let executionOutput: ExecutionOutput<T> | null;
 
       // if cannot get lock, retry until "lockAcquireTimeout" for the lock to be released
       // (check if output saved or if you need to try to acquire a lock again)
@@ -64,7 +67,7 @@ const core = (config: IdempotenderConfig): Idempotender => {
       let st = 500;
 
       do {
-        const executionData = await fetchExecution(dbKey, config1);
+        const executionData = await fetchExecution<T>(dbKey, config1);
         status = getExecutionStatus(executionData);
 
         if (status === ExecutionStatus.COMPLETED) {
@@ -101,8 +104,8 @@ const core = (config: IdempotenderConfig): Idempotender => {
         statusCompleted(): boolean {
           return status === ExecutionStatus.COMPLETED;
         },
-        output(): string {
-          if (status !== ExecutionStatus.COMPLETED) {
+        output(): ExecutionOutput<T> {
+          if (status !== ExecutionStatus.COMPLETED || executionOutput == null) {
             throw new Error('Cannot get output if execution is not completed');
           }
           return executionOutput;
@@ -110,13 +113,14 @@ const core = (config: IdempotenderConfig): Idempotender => {
         cancel: async (): Promise<void> => {
           await deleteExecution(dbKey, config1);
           status = ExecutionStatus.OPEN;
-          executionOutput = '';
+          executionOutput = null;
         },
-        complete: async (output: string): Promise<void> => {
-          await completeExecution(dbKey, output, config1);
+        complete: async (output: T): Promise<ExecutionOutput<T>> => {
+          const execOutput = await completeExecution<T>(dbKey, output, config1);
           // if this instance is still used it has the "write through" state
           status = ExecutionStatus.COMPLETED;
-          executionOutput = output;
+          executionOutput = execOutput;
+          return executionOutput;
         },
       };
     },

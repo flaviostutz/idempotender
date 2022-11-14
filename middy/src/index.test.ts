@@ -2,7 +2,7 @@
 
 import middy from '@middy/core';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import idempotender, { setDynamoDBClient } from 'idempotender-core';
+import idempotender, { setDynamoDBClient } from '@idempotender/core';
 
 import { awsContext } from './__mock__/awsContext';
 
@@ -23,6 +23,7 @@ setDynamoDBClient(ddbclient);
 
 describe('When using default configurations', () => {
   beforeAll(async () => {
+    // await (await idem.getExecution(`${prefix}:mykey222`)).cancel();
     const exec2 = await idem.getExecution(`${prefix}:mykey222`);
     await exec2.cancel();
     const exec3 = await idem.getExecution(`${prefix}:mykey333`);
@@ -116,7 +117,7 @@ describe('When using default configurations', () => {
 
     const event = { param1: 'mykey999', param2: 'something else' };
     const resp: any = await handler(event, awsContext());
-    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.idempotencyTime).not.toBeDefined();
     expect(resp.status).not.toBe(22222);
 
     const exec = await idem.getExecution(`${prefix}:mykey999`);
@@ -144,7 +145,8 @@ describe('When using default configurations', () => {
 
     // first call
     const resp: any = await handler(event, awsContext());
-    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.idempotencyTime).not.toBeDefined();
+    expect(resp.key).toBe(event.param2);
     expect(resp.on).toBeGreaterThan(-1);
     expect(resp.status).toEqual(22222);
     const exec = await idem.getExecution(`${prefix}:mykey1999`);
@@ -152,7 +154,8 @@ describe('When using default configurations', () => {
 
     // second call
     const resp2: any = await handler(event, awsContext());
-    expect(resp2.idempotencyFrom).toBeGreaterThan(1000);
+    expect(resp2.idempotencyTime).toBeGreaterThan(1000);
+    expect(resp2.key).toBe(event.param2);
     expect(resp2.on).toBeGreaterThan(-1);
     expect(resp2.status).toEqual(22222);
     const exec2 = await idem.getExecution(`${prefix}:mykey1999`);
@@ -182,14 +185,14 @@ describe('When using default configurations', () => {
 
     // first call
     const resp: any = await handler(event, awsContext());
-    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.idempotencyTime).not.toBeDefined();
     if (resp.headers) {
       expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
     }
 
     // second call
     const resp2: any = await handler(event, awsContext());
-    expect(resp2.idempotencyFrom).toBeGreaterThan(1000);
+    expect(resp2.idempotencyTime).toBeGreaterThan(1000);
     expect(resp2.headers['X-Idempotency-From']).toBeDefined();
   });
 
@@ -217,14 +220,14 @@ describe('When using default configurations', () => {
 
     // first call
     const resp: any = await handler(event, awsContext());
-    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.idempotencyTime).not.toBeDefined();
     if (resp.headers) {
       expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
     }
 
     // second call
     const resp2: any = await handler(event, awsContext());
-    expect(resp2.idempotencyFrom).not.toBeDefined();
+    expect(resp2.idempotencyTime).not.toBeDefined();
     if (resp.headers) {
       expect(resp.headers['X-Idempotency-From']).not.toBeDefined();
     }
@@ -253,11 +256,11 @@ describe('When using default configurations', () => {
 
     // first call
     const resp: any = await handler(event, awsContext());
-    expect(resp.idempotencyFrom).not.toBeDefined();
+    expect(resp.idempotencyTime).not.toBeDefined();
 
     // second call
     const resp2: any = await handler(event, awsContext());
-    expect(resp2.idempotencyFrom).not.toBeDefined();
+    expect(resp2.idempotencyTime).not.toBeDefined();
   });
 
   it('If handler throws an exception, idempotency should be canceled', async () => {

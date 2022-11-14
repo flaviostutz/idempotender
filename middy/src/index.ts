@@ -1,6 +1,6 @@
 /* eslint-disable no-undefined */
 import jmespath from 'jmespath';
-import idempotenderCore, { Execution } from 'idempotender-core';
+import idempotenderCore, { Execution } from '@idempotender/core';
 import middy from '@middy/core';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
@@ -37,7 +37,7 @@ const middleware = (
     config.markIdempotentResponse = true;
   }
 
-  const idemCore = idempotenderCore(config);
+  const idemCore = idempotenderCore<any>(config);
 
   const before: middy.MiddlewareFn = async (request): Promise<any> => {
     if (!config.keyMapper) {
@@ -61,39 +61,35 @@ const middleware = (
     // we already have the previous results of this execution
     if (execution.statusCompleted()) {
       const previousOut = execution.output();
-      if (previousOut) {
-        const pout = JSON.parse(previousOut);
-        // it should return immediatelly to avoid other transformations
-        // for other middlewares to take place, because the output
-        // was saved after other middlewares
-        // already changed the response, so we shoudn't transform again now
-        let aresp = {
-          ...request.response,
-          ...pout.data,
+      // it should return immediatelly to avoid other transformations
+      // for other middlewares to take place, because the output
+      // was saved after other middlewares
+      // already changed the response, so we shoudn't transform again now
+      let aresp = {
+        ...request.response,
+        ...previousOut.data,
+      };
+
+      if (config.markIdempotentResponse) {
+        // add response attribute with timestamp the first call was made
+        aresp = {
+          ...aresp,
+          ...{ idempotencyTime: previousOut.ts },
         };
 
-        if (config.markIdempotentResponse) {
-          // add response attribute with timestamp the first call was made
-          aresp = {
-            ...aresp,
-            ...{ idempotencyFrom: pout.ts },
-          };
-
-          // add X-Idempotency-From header if Lambda call came from HTTP call
-          if (isReqFromAPIGW(request)) {
-            if (!aresp.headers) {
-              aresp = { ...aresp, headers: {} };
-            }
-            aresp.headers = {
-              ...aresp.headers,
-              ...{ 'X-Idempotency-From': new Date(pout.ts).toISOString() },
-            };
+        // add X-Idempotency-From header if Lambda call came from HTTP call
+        if (isReqFromAPIGW(request)) {
+          if (!aresp.headers) {
+            aresp = { ...aresp, headers: {} };
           }
+          aresp.headers = {
+            ...aresp.headers,
+            ...{ 'X-Idempotency-From': new Date(previousOut.ts).toISOString() },
+          };
         }
-
-        return Promise.resolve(aresp);
       }
-      return Promise.resolve(null);
+
+      return Promise.resolve(aresp);
     }
 
     // even after waiting for some time, we couldn't get a lock, so we fail
@@ -116,7 +112,7 @@ const middleware = (
     if (!execution) {
       return Promise.resolve(undefined);
     }
-    const exec = <Execution>execution;
+    const exec = <Execution<any>>execution;
     await exec.cancel();
     return Promise.resolve(undefined);
   };
@@ -126,7 +122,7 @@ const middleware = (
     if (!execution) {
       throw new Error('request.internal.execution should be set');
     }
-    const exec = <Execution>execution;
+    const exec = <Execution<any>>execution;
 
     // actual function was executed
     if (exec.statusOpen()) {
@@ -165,14 +161,8 @@ const middleware = (
         }
       }
 
-      // wrap response so it can support null, string or object values
-      const output = {
-        data: request.response,
-        ts: new Date().getTime(),
-      };
       // store response for future calls to the same key
-      const outputstr = JSON.stringify(output);
-      await exec.complete(outputstr);
+      await exec.complete(request.response);
       return Promise.resolve(undefined);
     }
 

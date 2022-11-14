@@ -2,11 +2,12 @@
 
 TODO
 
-[X] migrate to Yarn 3
-[X] configure NX
-[ ] use dynalite for dynamodb testing
-[ ] publish pakages by tagging
-[ ] document complete example
+- [X] migrate to Yarn 3
+- [X] configure NX
+- [X] use dynalite for dynamodb testing
+- [X] publish pakages by tagging
+- [ ] create "withIdempotency" utility function
+- [ ] document complete example
 
 JS lib for helping creating idempotent functions by storing states in DynamoDB.
 
