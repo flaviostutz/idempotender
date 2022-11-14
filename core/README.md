@@ -37,7 +37,7 @@ Resources:
 - Create function
 
 ```js
-import idempotender from '@idempotender/core';
+import { withIdempotency } from '@idempotender/core';
 
 function myIdempotentFunction(param1: string, param2: string): string {
 
