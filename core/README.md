@@ -8,10 +8,6 @@ It is able to acquire a lock for an execution to prevent concurrency situations,
 
 - `npm install --save @idempotender/core`
 
-```js
-import idempotender from '@idempotender/core';
-```
-
 - Create DynamoDB table with structure:
 
 ```yml
@@ -32,8 +28,6 @@ Resources:
 
 ### Example: Simplest form
 
-- `npm install --save @idempotender/core`
-
 - Create function
 
 ```js
@@ -42,25 +36,18 @@ import { withIdempotency } from '@idempotender/core';
 function myIdempotentFunction(param1: string, param2: string): string {
 
   const out1 = await withIdempotency(():string => {
+    // business logic
     return `First run at ${new Date()}`;
-  }, `${param1}:${param2}`);
+  }, 
+  // idempotency key
+  `${param1}:${param2}`);
 
-  // DO BUSINESS HERE
-  try {
-    console.log(`I only hello world for (${param1},${param2}) once!`);
-    const output = `This is output '${param1}${param2}' at ${new Date()}`;
-  } catch (err) {
-    console.log('Error during function execution');
-    idem.cancel(execution.key);
-  }
 }
 ```
 
 ### Example: Using more advanced options of the API
 
 - It will deactivate the hashing mechanism, so in the database you can see the actual contents of param1:param2 and there is no chance of collision.
-
-- `npm install --save @idempotender/core`
 
 - Create function
 
