@@ -35,13 +35,14 @@ import { withIdempotency } from '@idempotender/core';
 
 function myIdempotentFunction(param1: string, param2: string): string {
 
-  const out1 = await withIdempotency(():string => {
+  const out = await withIdempotency(():string => {
     // business logic
     return `First run at ${new Date()}`;
-  }, 
+  },
   // idempotency key
   `${param1}:${param2}`);
 
+  return out;
 }
 ```
 
