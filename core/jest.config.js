@@ -1,6 +1,10 @@
+// needed by local dynamodb
+process.env.AWS_ACCESS_KEY_ID = 'DUMMY';
+process.env.AWS_SECRET_ACCESS_KEY = 'DUMMY';
+
 // eslint-disable-next-line import/no-commonjs
 module.exports = {
-  preset: '@shelf/jest-dynamodb',
+  preset: 'jest-dynalite',
   testMatch: ['**/?(*.)+(spec|test).+(ts|tsx|js)'],
   transform: {
     '^.+\\.(tsx?|json?)$': [

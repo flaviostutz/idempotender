@@ -1,17 +1,19 @@
-name: master-build
+name: core-pr
 
 on:
-  push:
+  pull_request:
     branches: ['main']
 
 jobs:
   build:
-    name: Build master
+    name: Build core PRs
     uses: flaviostutz/gh-makefile/.github/workflows/make-ci.yml@main
     with:
       working-directory: ./
       tooling: node
       tooling-version: 16
+      tooling-cache: yarn
       target-build: true
       target-lint: true
       target-unit-tests: true
+      target-get-environment-url: false

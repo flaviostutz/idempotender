@@ -1,57 +1,27 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-import { setDynamodDBClient, deleteExecution } from './db';
-import { idempotender } from './idempotender';
+import { setDynamoDBClient, deleteExecution } from './db';
+import { core } from './core';
 import { sleep } from './utils';
 
-describe('when using idempotender with custom configurations', () => {
+const config = { dynamoDBTableName: 'IdempotencyExecutions' };
+const ddbclient = new DynamoDBClient({
+  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+  region: 'local',
+});
+setDynamoDBClient(ddbclient);
 
-  beforeAll(async () => {
-    const config = { dynamoDBTableName: 'IdempotencyExecutions' };
-    const ddbclient = new DynamoDBClient({
-      endpoint: 'http://localhost:8000',
-      region: 'local-env',
-    });
-    setDynamodDBClient(ddbclient);
-    await deleteExecution('1123', config);
-    await deleteExecution('2123', config);
-    await deleteExecution('3123', config);
-    await deleteExecution('4123', config);
-    await deleteExecution('5123', config);
-    await deleteExecution('6123', config);
-    await deleteExecution('7123', config);
-    await deleteExecution('8123', config);
-    await deleteExecution('9123', config);
-    await deleteExecution('10123', config);
-    await deleteExecution('11123', config);
-  });
-
-  it('map key with custom mapper should work', () => {
-    const idem = idempotender({ keyMapper: (vv) => vv.key1.key2 });
-    const res = idem.mapKey({ key1: { key2: 'value1' } });
-    expect(res).toEqual('value1');
-  });
-
-  it('map key with embedded jmespath should work', () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
-    const res = idem.mapKey({ key1: 'value1' });
-    expect(res).toEqual('value1');
-  });
-
-  it('map key with embedded jmespath should work 2', () => {
-    const idem = idempotender({ keyJmespath: 'key1.key2[1]' });
-    const res = idem.mapKey({ key1: { key2: ['test1', 'test2', 'test3'] } });
-    expect(res).toEqual('test2');
-  });
-
+describe('when using core with custom configurations', () => {
   it('get inexistant execution should lead to "open" state', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    await deleteExecution('1123', config);
+    const idem = core({});
     const res = await idem.getExecution('1123');
     expect(res.statusOpen()).toBeTruthy();
   });
 
   it('save execution should lead to "completed" state', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    await deleteExecution('2123', config);
+    const idem = core({});
     const res = await idem.getExecution('2123');
     await res.complete('test');
     const res2 = await idem.getExecution('2123');
@@ -59,8 +29,30 @@ describe('when using idempotender with custom configurations', () => {
     expect(res2.statusCompleted()).toBeTruthy();
   });
 
+  it('save execution should not take too long for large keys', async () => {
+    const idem = core({});
+    const key =
+      'dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5dkfjahjlkd hlakfhkaf kadshjfalkdsjhfdlakshj alkdfhj alkdshfjadlskfhj adlksfh adslkaf dsklf dsklhaf dsklhaf sdkljhf kj3h4 l2k3hj4 23482734 9a7ef9asdfjhasdgf asdifg a897t 2398472j kaegfasgdf a87f 9a8ew7fta8w9ef7aewi jhfg aewifg aew987t 2394t234324hjk32432jh aw987ft a9df9a8s7df6987629842ji4hg23i gr23qig iuyg asdfhgaskdjhgfdas87f6ads867f5das786f5as678fads8765fdsg6adsf876dg8787fg87asfg8a7ds6fga87dsfa87dsfa87g5 a78g5 a5a7d5 af gf5 678dsafg a678dsf5g 8a7ds65fg a5a786d5f ad5';
+    const res = await idem.getExecution(key);
+    await res.complete('test');
+    const res2 = await idem.getExecution(key);
+    expect(res2.statusOpen()).toBeFalsy();
+    expect(res2.statusCompleted()).toBeTruthy();
+  });
+
+  it('save execution should lead to "completed" state even if not using hash', async () => {
+    await deleteExecution('h2123', config);
+    const idem = core({ keyHash: false });
+    const res = await idem.getExecution('h2123');
+    await res.complete('test');
+    const res2 = await idem.getExecution('h2123');
+    expect(res2.statusOpen()).toBeFalsy();
+    expect(res2.statusCompleted()).toBeTruthy();
+  });
+
   it('cancel execution should lead to "open" state in subsequent calls', async () => {
-    const idem = idempotender({ keyJmespath: 'key1' });
+    await deleteExecution('3123', config);
+    const idem = core({});
 
     const res = await idem.getExecution('3123');
     await res.complete('test');
@@ -73,8 +65,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('acquire lock should lead to "locked" state in parallel calls after timeout', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('4123', config);
+    const idem = core({
       lockTTL: 2,
       lockAcquireTimeout: 1,
     });
@@ -89,8 +81,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "completed" if first client resolves it under the lockAcquireTimeout time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('5123', config);
+    const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
     });
@@ -98,8 +90,11 @@ describe('when using idempotender with custom configurations', () => {
     // should succeed with a lock
     const res1 = await idem.getExecution('5123');
     expect(res1.statusOpen()).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    setTimeout(() => { res1.complete('test2'); }, 1000);
+
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      res1.complete('test2');
+    }, 1000);
 
     // should be locked by the first call, but it will retry
     // and as the first process will complete it, this should
@@ -110,8 +105,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('second acquire lock should resolve to "open" if first client cancels it under the lockAcquireTimeout time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('6123', config);
+    const idem = core({
       lockTTL: 3,
       lockAcquireTimeout: 2,
     });
@@ -119,8 +114,11 @@ describe('when using idempotender with custom configurations', () => {
     // should succeed with a lock
     const res1 = await idem.getExecution('6123');
     expect(res1.statusOpen()).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    setTimeout(() => { res1.cancel(); }, 1000);
+
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      res1.cancel();
+    }, 1000);
 
     // should be locked by the first call, but it will retry
     // and as the first process will complete it, this should
@@ -130,8 +128,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('"completed" execution should be back to "open" after execution expiration time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('7123', config);
+    const idem = core({
       lockTTL: 0.5,
       lockAcquireTimeout: 0.4,
       executionTTL: 1,
@@ -151,8 +149,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('"locked" execution should be back to "open" after lock expiration time', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('8123', config);
+    const idem = core({
       lockTTL: 1.1,
       lockAcquireTimeout: 0.3,
       executionTTL: 3,
@@ -171,8 +169,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('lock shouldnt be acquired if lockEnable==false in config', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('9123', config);
+    const idem = core({
       lockEnable: false,
     });
 
@@ -186,10 +184,9 @@ describe('when using idempotender with custom configurations', () => {
     expect(res2.statusOpen()).toBeTruthy();
   });
 
-
   it('second client should see "complete" status after first client "completes" it when not using locks', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('10123', config);
+    const idem = core({
       lockEnable: false,
     });
 
@@ -205,8 +202,8 @@ describe('when using idempotender with custom configurations', () => {
   });
 
   it('when two clients run in parallel, the later writer whould overwrite the first when no lock is used', async () => {
-    const idem = idempotender({
-      keyJmespath: 'key1',
+    await deleteExecution('11123', config);
+    const idem = core({
       lockEnable: false,
     });
 
@@ -231,8 +228,4 @@ describe('when using idempotender with custom configurations', () => {
     expect(res3.statusCompleted()).toBeTruthy();
     expect(res3.output()).toEqual('res2value');
   });
-
-
 });
-
-

@@ -1,4 +1,4 @@
-import jmespath from 'jmespath';
+import crypto from 'crypto';
 
 import { fetchExecution, lockAcquire, deleteExecution, completeExecution } from './db';
 import { Execution } from './types/Execution';
@@ -7,19 +7,11 @@ import { Idempotender } from './types/Idempotender';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
 import { getExecutionStatus, sleep } from './utils';
 
-const jmespathMapper = (query: string) => {
-  return (input: any): string => {
-    return jmespath.search(input, query);
-  };
-};
-
 const defaultConfig: IdempotenderConfig = {
   dynamoDBTableName: 'IdempotencyExecutions',
   lockEnable: true,
   lockTTL: 60,
   executionTTL: 24 * 3600,
-  keyJmespath: null,
-  keyMapper: null,
   keyHash: true,
   lockAcquireTimeout: 10,
 };
@@ -28,16 +20,8 @@ const defaultConfig: IdempotenderConfig = {
  * Configure Idempotender
  * @param config Configuration parameters
  */
-const idempotender = (config:IdempotenderConfig):Idempotender => {
+const core = (config: IdempotenderConfig): Idempotender => {
   const config1 = { ...defaultConfig, ...config };
-  if (!config1.keyMapper && !config1.keyJmespath?.trim()) {
-    throw new Error("Config: Either 'keyJmespath' or a custom 'keyMapper' function is required in configuration object");
-  }
-  if (config1.keyMapper && config1.keyJmespath) {
-    throw new Error(
-        "Config: If 'keyMapper' is defined, 'keyJmespath' shouldn't be defined because it won't have an effect",
-      );
-  }
   if (!config1.lockTTL) {
     throw new Error('Config: lockTTL is required');
   }
@@ -49,25 +33,29 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
   }
 
   if (config1.lockTTL > config1.executionTTL) {
-    throw new Error('Config: lockTTL shouldn\'t be greater than executionTTL');
+    throw new Error("Config: lockTTL shouldn't be greater than executionTTL");
   }
   if (config1.lockAcquireTimeout > config1.lockTTL) {
-    throw new Error('Config: lockAcquireTimeout shouldn\'t be greater than lockTTL');
-  }
-
-  if (config1.keyJmespath) {
-    config1.keyMapper = jmespathMapper(config1.keyJmespath);
+    throw new Error("Config: lockAcquireTimeout shouldn't be greater than lockTTL");
   }
 
   return {
     getExecution: async (key: string): Promise<Execution> => {
-          // determine status of execution
+      let dbKey = key;
+
+      if (config1.keyHash) {
+        const hash = crypto.createHash('sha512');
+        const data = hash.update(key, 'utf-8');
+        dbKey = data.digest('hex');
+      }
+
+      // determine status of execution
       let status = ExecutionStatus.OPEN;
       let lockAcquired = false;
       let executionOutput: string;
 
-          // if cannot get lock, retry until "lockAcquireTimeout" for the lock to be released
-          // (check if output saved or if you need to try to acquire a lock again)
+      // if cannot get lock, retry until "lockAcquireTimeout" for the lock to be released
+      // (check if output saved or if you need to try to acquire a lock again)
       const startTime = new Date().getTime();
       if (!config1.lockAcquireTimeout) {
         throw new Error('lockAcquireTimeout should be present in config');
@@ -76,7 +64,7 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
       let st = 500;
 
       do {
-        const executionData = await fetchExecution(key, config1);
+        const executionData = await fetchExecution(dbKey, config1);
         status = getExecutionStatus(executionData);
 
         if (status === ExecutionStatus.COMPLETED) {
@@ -93,7 +81,7 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
         }
 
         if (status === ExecutionStatus.OPEN) {
-          lockAcquired = await lockAcquire(key, config1);
+          lockAcquired = await lockAcquire(dbKey, config1);
           if (lockAcquired) {
             break;
           }
@@ -120,24 +108,19 @@ const idempotender = (config:IdempotenderConfig):Idempotender => {
           return executionOutput;
         },
         cancel: async (): Promise<void> => {
-          await deleteExecution(key, config1);
+          await deleteExecution(dbKey, config1);
+          status = ExecutionStatus.OPEN;
+          executionOutput = '';
         },
         complete: async (output: string): Promise<void> => {
-          await completeExecution(key, output, config1);
+          await completeExecution(dbKey, output, config1);
           // if this instance is still used it has the "write through" state
           status = ExecutionStatus.COMPLETED;
           executionOutput = output;
         },
       };
     },
-    mapKey: (input: any): string => {
-      if (!config1.keyMapper) {
-        throw new Error('keyMapper shouldnt be null');
-      }
-      return config1.keyMapper(input);
-    },
   };
-
 };
 
-export { idempotender };
+export { core };

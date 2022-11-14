@@ -96,8 +96,8 @@ const completeExecution = async (
   await dynamodDBClient.send(command);
 };
 
-const setDynamodDBClient = (ddbclient: DynamoDBClient): void => {
+const setDynamoDBClient = (ddbclient: DynamoDBClient): void => {
   dynamodDBClient = ddbclient;
 };
 
-export { lockAcquire, fetchExecution, deleteExecution, completeExecution, setDynamodDBClient };
+export { lockAcquire, fetchExecution, deleteExecution, completeExecution, setDynamoDBClient };
