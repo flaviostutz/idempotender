@@ -1,4 +1,5 @@
 # idempotender
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender?ref=badge_shield)
 
 JS lib for helping creating idempotent functions by storing states in DynamoDB.
@@ -9,6 +10,8 @@ You can use it as:
 
 - [Middy Middleware for AWS Lambda functions](middy/README.md)
 - [Core library for anything else](core/README.md)
+
+- [Check a working example here](examples/random-generator-lambda/README.md)
 
 Check the specific documentation for details on how to use it.
 

@@ -1,5 +1,7 @@
 # random-generator-lambda
 
+This is a complete example of a AWS Lambda function using Serverless Framework and Middy with Idempotender making sure the call is idempotent.
+
 ## How to run
 
 - Checkout this repo
