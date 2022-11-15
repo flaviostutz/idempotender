@@ -1,11 +1,9 @@
 # Build this module and all its dependencies
-build:
-	yarn install --frozen-lockfile
+build: install
 	npx nx run build-module --verbose --output-style=stream
 
 # Build only this module (without dependencies)
-build-module:
-	yarn install --frozen-lockfile
+build-module: install
 	rm -rf dist
 	npx esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
 	npx tsc --emitDeclarationOnly --outDir dist
@@ -34,4 +32,6 @@ clean:
 	rm -rf node_modules
 	rm -rf dist
 
+install: node_modules
+	yarn install --frozen-lockfile
 

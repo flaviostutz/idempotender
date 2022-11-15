@@ -1,15 +1,6 @@
 # idempotender
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender?ref=badge_shield)
 
-TODO
-
-- [X] migrate to Yarn 3
-- [X] configure NX
-- [X] use dynalite for dynamodb testing
-- [X] publish pakages by tagging
-- [ ] create "withIdempotency" utility function
-- [ ] document complete example
-
 JS lib for helping creating idempotent functions by storing states in DynamoDB.
 
 Idempotency is the attribute of a function to be called multiple times with a certain input so the underlying state and the output stays the same as the first execution regardless of how many times the function was called with that input.

@@ -1,9 +1,9 @@
 /* eslint-disable id-length */
 import {
   PutItemCommand,
-  DynamoDBClient,
   GetItemCommand,
   DeleteItemCommand,
+  DynamoDBClient,
 } from '@aws-sdk/client-dynamodb';
 
 import { ExecutionData } from './types/ExecutionData';
@@ -11,9 +11,10 @@ import { ExecutionOutput } from './types/ExecutionOutput';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
 import { dynamoToExecutionData, executionDataToDynamo } from './utils';
 
-let dynamodDBClient = new DynamoDBClient({});
-
 const lockAcquire = async (key: string, config: IdempotenderConfig): Promise<boolean> => {
+  if (!config.dynamoDBClient) {
+    config.dynamoDBClient = new DynamoDBClient({});
+  }
   // put lockTTL=[date in future] with condition lockTTL==0
   if (!config.executionTTL) {
     throw new Error('executionTTL shouldnt be null');
@@ -39,7 +40,7 @@ const lockAcquire = async (key: string, config: IdempotenderConfig): Promise<boo
   });
 
   try {
-    await dynamodDBClient.send(command);
+    await config.dynamoDBClient.send(command);
     return true;
   } catch (err: any) {
     if (err.name !== 'ConditionalCheckFailedException') {
@@ -53,13 +54,16 @@ const fetchExecution = async <T>(
   key: string,
   config: IdempotenderConfig,
 ): Promise<ExecutionData<T> | null> => {
+  if (!config.dynamoDBClient) {
+    config.dynamoDBClient = new DynamoDBClient({});
+  }
   const command = new GetItemCommand({
     TableName: config.dynamoDBTableName,
     Key: { Id: { S: key } },
     ConsistentRead: true,
   });
 
-  const response = await dynamodDBClient.send(command);
+  const response = await config.dynamoDBClient.send(command);
   if (response.Item) {
     return dynamoToExecutionData(response.Item);
   }
@@ -71,7 +75,10 @@ const deleteExecution = async (key: string, config: IdempotenderConfig): Promise
     TableName: config.dynamoDBTableName,
     Key: { Id: { S: key } },
   });
-  await dynamodDBClient.send(command);
+  if (!config.dynamoDBClient) {
+    config.dynamoDBClient = new DynamoDBClient({});
+  }
+  await config.dynamoDBClient.send(command);
 };
 
 const completeExecution = async <T>(
@@ -81,6 +88,9 @@ const completeExecution = async <T>(
 ): Promise<ExecutionOutput<T>> => {
   if (!config.executionTTL) {
     throw new Error('executionTTL should be defined');
+  }
+  if (!config.dynamoDBClient) {
+    config.dynamoDBClient = new DynamoDBClient({});
   }
 
   const execOutput = {
@@ -100,16 +110,8 @@ const completeExecution = async <T>(
     TableName: config.dynamoDBTableName,
     Item: executionDataToDynamo(executionData),
   });
-  await dynamodDBClient.send(command);
+  await config.dynamoDBClient.send(command);
   return execOutput;
 };
 
-/**
- * Setups a custom dynamodb client to be used on all db interactions
- * @param ddbclient DynamoDB client
- */
-const setDynamoDBClient = (ddbclient: DynamoDBClient): void => {
-  dynamodDBClient = ddbclient;
-};
-
-export { lockAcquire, fetchExecution, deleteExecution, completeExecution, setDynamoDBClient };
+export { lockAcquire, fetchExecution, deleteExecution, completeExecution };

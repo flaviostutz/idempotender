@@ -14,13 +14,13 @@ module.exports = {
       },
     ],
   },
-  collectCoverage: false,
+  collectCoverage: true,
   collectCoverageFrom: ['./src/**'],
   coverageThreshold: {
     global: {
-      lines: 50,
+      lines: 80,
       branches: 50,
-      functions: 50,
+      functions: 80,
     },
   },
 };

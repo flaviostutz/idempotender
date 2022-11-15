@@ -157,7 +157,10 @@ const idem = idempotenderMiddy({
 
 ```js
 // example
-handler.use(idempotenderMiddy(config)).use(httpErrorHandler()).use(cors());
+handler = middy(lambdaHandler)
+  .use(idempotenderMiddy(config))
+  .use(httpErrorHandler())
+  .use(cors());
 ```
 
 - Config attributes:

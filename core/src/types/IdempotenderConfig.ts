@@ -1,3 +1,5 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
 /**
  * Idempotender configurations
  */
@@ -8,6 +10,11 @@ export type IdempotenderConfig = {
    * Defaults to 'IdempotencyExecutions'
    */
   dynamoDBTableName?: string;
+
+  /**
+   * Optional dynamoDBClient to be used
+   */
+  dynamoDBClient?: DynamoDBClient;
 
   /**
    * If enabled, will control a distributed execution lock in DynamoDB

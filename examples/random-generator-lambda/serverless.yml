@@ -11,9 +11,23 @@ provider:
   tracing:
     lambda: true
     apiGateway: true
-            
+  environment:
+    STAGE: ${sls:stage}
+
 resources:
   Resources:
+    IdempotencyExecutions:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: Id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: Id
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: executionTTL
+          Enabled: true
 
 package:
   individually: true
@@ -25,14 +39,14 @@ functions:
       - http:
           path: random/number
           method: get
-          private: true
 
 plugins:
   - serverless-esbuild
   - serverless-prune-plugin # for removing old lambda versions
+  - '@nearst/serverless-dynalite' # run local dynamodb in offline mode
   - serverless-offline
-  
-custom:	
+
+custom:
   esbuild:
     minify: false
     bundle: true

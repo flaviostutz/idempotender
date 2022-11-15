@@ -1,12 +1,11 @@
 SHELL := /bin/bash
 
-build:
-	yarn install --frozen-lockfile
+build: install
 	npx nx run build-module --verbose --output-style=stream
 
 # Build only this module (without dependencies)
 build-module:
-	yarn install --frozen-lockfile
+	yarn install --frozen-lockfile --ignore-optional
 
 lint:
 	npx eslint . --ext .ts
@@ -35,11 +34,13 @@ stagereq:
     	exit 1;\
 	fi
 
-start:
-	sls offline
+start: build
+	sls offline --stage local
 
 all: build lint unit-tests deploy
 
 clean: undeploy
 	rm -rf node_modules
 
+install: node_modules
+	yarn install --frozen-lockfile --ignore-optional

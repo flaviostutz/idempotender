@@ -1,24 +1,24 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
 import { withIdempotency } from './withIdempotency';
-import { setDynamoDBClient } from './db';
 import { core } from './core';
 
-const ddbclient = new DynamoDBClient({
-  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
-  region: 'local',
-});
-setDynamoDBClient(ddbclient);
+const testConfig = {
+  dynamoDBClient: new DynamoDBClient({
+    endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+    region: 'local',
+  }),
+};
 
 describe('withIdempotency utility', () => {
   it('Multiple calls to same key should return cached value', async () => {
     const out1 = await withIdempotency((): string => {
       return `First run at ${new Date()}`;
-    }, 'key1');
+    }, 'key1', testConfig);
 
     const out2 = await withIdempotency((): string => {
       return `Second run at ${new Date()}`;
-    }, 'key1');
+    }, 'key1', testConfig);
 
     expect(out2).toStrictEqual(out1);
   });
@@ -27,7 +27,7 @@ describe('withIdempotency utility', () => {
     const idemFunc = async (): Promise<void> => {
       await withIdempotency((): string => {
         throw new Error('WOW! Something happened!');
-      }, 'key1');
+      }, 'key1', testConfig);
     };
     await expect(idemFunc).rejects.toThrowError();
   });
@@ -39,6 +39,7 @@ describe('withIdempotency utility', () => {
       executionTTL: 2.5,
       keyHash: true,
       lockAcquireTimeout: 0.3,
+      dynamoDBClient: testConfig.dynamoDBClient,
     };
 
     // call function

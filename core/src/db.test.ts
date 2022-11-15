@@ -5,28 +5,26 @@ import {
   completeExecution,
   deleteExecution,
   fetchExecution,
-  setDynamoDBClient,
 } from './db';
 
-const config = {
+const testConfig = {
   dynamoDBTableName: 'IdempotencyExecutions',
   lockEnable: true,
   lockTTL: 60,
   executionTTL: 24 * 3600,
   keyHash: true,
   lockAcquireTimeout: 10,
+  dynamoDBClient: new DynamoDBClient({
+    endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+    region: 'local',
+  }),
 };
-const ddbclient = new DynamoDBClient({
-  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
-  region: 'local',
-});
-setDynamoDBClient(ddbclient);
 
 describe('when using local dynamodb', () => {
   it('should be able to save and fetch execution (with string)', async () => {
-    await deleteExecution('111', config);
-    await completeExecution('111', 'ABC', config);
-    const result = await fetchExecution<string>('111', config);
+    await deleteExecution('111', testConfig);
+    await completeExecution('111', 'ABC', testConfig);
+    const result = await fetchExecution<string>('111', testConfig);
     expect(result?.key).toEqual('111');
     expect(result?.outputSaved).toBeTruthy();
     expect(result?.outputValue.data).toEqual('ABC');
@@ -36,9 +34,9 @@ describe('when using local dynamodb', () => {
   });
 
   it('should be able to acquire lock execution (with string)', async () => {
-    await deleteExecution('222', config);
-    await lockAcquire('222', config);
-    const result = await fetchExecution<string>('222', config);
+    await deleteExecution('222', testConfig);
+    await lockAcquire('222', testConfig);
+    const result = await fetchExecution<string>('222', testConfig);
     expect(result?.key).toEqual('222');
     expect(result?.outputSaved).toBeFalsy();
     expect(result?.outputValue.data).toEqual('');
@@ -49,17 +47,17 @@ describe('when using local dynamodb', () => {
   });
 
   it('should be able to delete execution (with string)', async () => {
-    await deleteExecution('333', config);
-    await completeExecution('333', 'XYZ', config);
-    await deleteExecution('333', config);
-    const result = await fetchExecution<string>('333', config);
+    await deleteExecution('333', testConfig);
+    await completeExecution('333', 'XYZ', testConfig);
+    await deleteExecution('333', testConfig);
+    const result = await fetchExecution<string>('333', testConfig);
     expect(result).toBeNull();
   });
 
   it('should be able to save and fetch execution (with complex object)', async () => {
-    await deleteExecution('111', config);
-    await completeExecution('111', { mydata: 'ABC', other: 'XYZ' }, config);
-    const result = await fetchExecution<{ mydata: string; other: string }>('111', config);
+    await deleteExecution('111', testConfig);
+    await completeExecution('111', { mydata: 'ABC', other: 'XYZ' }, testConfig);
+    const result = await fetchExecution<{ mydata: string; other: string }>('111', testConfig);
     expect(result?.key).toEqual('111');
     expect(result?.outputSaved).toBeTruthy();
     expect(result?.outputValue.data).toEqual({ mydata: 'ABC', other: 'XYZ' });
@@ -69,9 +67,9 @@ describe('when using local dynamodb', () => {
   });
 
   it('should be able to save and fetch execution (with number)', async () => {
-    await deleteExecution('111', config);
-    await completeExecution('111', 123, config);
-    const result = await fetchExecution<number>('111', config);
+    await deleteExecution('111', testConfig);
+    await completeExecution('111', 123, testConfig);
+    const result = await fetchExecution<number>('111', testConfig);
     expect(result?.key).toEqual('111');
     expect(result?.outputSaved).toBeTruthy();
     expect(result?.outputValue.data).toEqual(123);
@@ -81,9 +79,9 @@ describe('when using local dynamodb', () => {
   });
 
   it('should be able to save and fetch execution (with null)', async () => {
-    await deleteExecution('111', config);
-    await completeExecution('111', null, config);
-    const result = await fetchExecution<null>('111', config);
+    await deleteExecution('111', testConfig);
+    await completeExecution('111', null, testConfig);
+    const result = await fetchExecution<null>('111', testConfig);
     expect(result?.key).toEqual('111');
     expect(result?.outputSaved).toBeTruthy();
     expect(result?.outputValue.data).toBeNull();

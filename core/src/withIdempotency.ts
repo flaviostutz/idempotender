@@ -1,3 +1,5 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
 import { core } from './core';
 import { ExecutionOutput } from './types/ExecutionOutput';
 import { IdempotenderConfig } from './types/IdempotenderConfig';
@@ -6,7 +8,9 @@ import { IdempotentFunc } from './types/IdempotentFunc';
 async function withIdempotency<T>(
   func: IdempotentFunc<T>,
   key: string,
-  config: IdempotenderConfig = {},
+  config: IdempotenderConfig = {
+    dynamoDBClient: new DynamoDBClient({}),
+  },
 ): Promise<ExecutionOutput<T>> {
   const ccore = core<T>(config);
   const execution = await ccore.getExecution(key);

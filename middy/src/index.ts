@@ -44,10 +44,13 @@ const middleware = (
       throw new Error('keyMapper shouldnt be null');
     }
 
-    const ckey = config.keyMapper(request.event);
-
+    const akey = config.keyMapper(request.event);
+    let ckey = akey;
+    if (typeof akey !== 'string') {
+      ckey = JSON.stringify(akey);
+    }
     if (!ckey || typeof ckey !== 'string' || ckey.length <= 4) {
-      throw new Error(`The key used for idempotency must be a string with len>4. key=${ckey}`);
+      throw new Error(`The key for idempotency returned by mapper must be a string with len>4. key='${ckey}'`);
     }
 
     // prefix key with lambda id from arn to reduce even more the chance of collision

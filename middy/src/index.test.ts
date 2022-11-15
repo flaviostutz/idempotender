@@ -2,24 +2,26 @@
 
 import middy from '@middy/core';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import idempotender, { setDynamoDBClient } from '@idempotender/core';
+import idempotender from '@idempotender/core';
 
 import { awsContext } from './__mock__/awsContext';
 
 import idempotenderMiddy from './index';
 
+const testDynamoDBClient = new DynamoDBClient({
+  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
+  region: 'local',
+});
+
 const prefix = awsContext().invokedFunctionArn.split(':')[4];
-const idem = idempotender({ lockAcquireTimeout: 1, lockTTL: 2 });
+const idem = idempotender({
+  lockAcquireTimeout: 1, lockTTL: 2,
+  dynamoDBClient: testDynamoDBClient,
+});
 
 const randomInt = (): number => {
   return Math.floor(Math.random() * 999999);
 };
-
-const ddbclient = new DynamoDBClient({
-  endpoint: process.env.MOCK_DYNAMODB_ENDPOINT,
-  region: 'local',
-});
-setDynamoDBClient(ddbclient);
 
 describe('When using default configurations', () => {
   beforeAll(async () => {
@@ -51,18 +53,18 @@ describe('When using default configurations', () => {
   });
 
   it('Jmespath expression should be required', async () => {
-    const test = (): any => idempotenderMiddy({});
+    const test = (): any => idempotenderMiddy({ dynamoDBClient: testDynamoDBClient });
     expect(test).toThrowError();
   });
 
   it('Custom key mapper should be supported', async () => {
-    const test = (): any => idempotenderMiddy({ keyMapper: (mm) => mm });
+    const test = (): any => idempotenderMiddy({ keyMapper: (mm) => mm, dynamoDBClient: testDynamoDBClient });
     expect(test).not.toThrowError();
   });
 
   it('Should fail if a valid key cannot be extracted', async () => {
     const handler = middy(() => {});
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
     const event = {};
 
     const invokeHandler = async (): Promise<void> => {
@@ -72,9 +74,22 @@ describe('When using default configurations', () => {
     await expect(invokeHandler).rejects.toThrowError();
   });
 
+  it('Should fail if extracted key is too short', async () => {
+    const handler = middy(() => {});
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
+    const event = { param1: 'abc' };
+
+    const invokeHandler = async (): Promise<void> => {
+      return handler(event, awsContext());
+    };
+
+    await expect(invokeHandler).rejects.toThrowError();
+  });
+
+
   it('Should succeed if key can be extracted', async () => {
     const handler = middy(() => {});
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
     const event = { param1: 'valid key here!' };
     await handler(event, awsContext());
   });
@@ -89,7 +104,7 @@ describe('When using default configurations', () => {
         on: randomInt(),
       };
     });
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
 
     const event = { param1: 'mykey111', param2: 'something else' };
     const resp = await handler(event, awsContext());
@@ -112,6 +127,7 @@ describe('When using default configurations', () => {
       idempotenderMiddy({
         keyJmespath: 'param1',
         validResponseJmespath: 'on > `-1` && status == `22222`',
+        dynamoDBClient: testDynamoDBClient,
       }),
     );
 
@@ -138,6 +154,7 @@ describe('When using default configurations', () => {
       idempotenderMiddy({
         keyJmespath: 'param1',
         validResponseJmespath: 'on > `-1` && status == `22222`',
+        dynamoDBClient: testDynamoDBClient,
       }),
     );
 
@@ -174,7 +191,7 @@ describe('When using default configurations', () => {
     handler.use(
       idempotenderMiddy({
         keyJmespath: 'param1',
-        // use default validResponseJmespath
+        dynamoDBClient: testDynamoDBClient,
       }),
     );
 
@@ -209,7 +226,7 @@ describe('When using default configurations', () => {
       idempotenderMiddy({
         keyJmespath: 'param1',
         markIdempotentResponse: false,
-        // use default validResponseJmespath
+        dynamoDBClient: testDynamoDBClient,
       }),
     );
 
@@ -245,7 +262,7 @@ describe('When using default configurations', () => {
     handler.use(
       idempotenderMiddy({
         keyJmespath: 'param1',
-        // use default validResponseJmespath
+        dynamoDBClient: testDynamoDBClient,
       }),
     );
 
@@ -270,7 +287,7 @@ describe('When using default configurations', () => {
       runCount += 1;
       throw new Error('Something went wrong, man!');
     });
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
     const event = { param1: 'mykey777', param2: 'something else' };
 
     const invokeHandler = async (): Promise<void> => {
@@ -293,7 +310,7 @@ describe('When using default configurations', () => {
       runCount += 1;
       throw new Error('Something went wrong, man!');
     });
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' })).onError(async (request) => {
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient })).onError(async (request) => {
       request.response = {
         statusCode: 412,
         body: 'Sorry. Try again later',
@@ -331,7 +348,7 @@ describe('When using default configurations', () => {
         on: randomInt(),
       };
     });
-    handler.use(idempotenderMiddy({ keyJmespath: 'param1' }));
+    handler.use(idempotenderMiddy({ keyJmespath: 'param1', dynamoDBClient: testDynamoDBClient }));
 
     const event = { param1: 'mykey222', param2: 'something else' };
 
@@ -377,6 +394,7 @@ describe('When using default configurations', () => {
           lockAcquireTimeout: 600,
           lockTTL: 700,
           executionTTL: 1200,
+          dynamoDBClient: testDynamoDBClient,
         }),
       )
       .after(() => {

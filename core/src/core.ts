@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
 import { fetchExecution, lockAcquire, deleteExecution, completeExecution } from './db';
 import { Execution } from './types/Execution';
 import { ExecutionOutput } from './types/ExecutionOutput';
@@ -15,6 +17,7 @@ const defaultConfig: IdempotenderConfig = {
   executionTTL: 24 * 3600,
   keyHash: true,
   lockAcquireTimeout: 10,
+  dynamoDBClient: new DynamoDBClient({}),
 };
 
 /**
@@ -44,6 +47,10 @@ const core = <T>(config: IdempotenderConfig): Idempotender<T> => {
 
   return {
     getExecution: async (key: string): Promise<Execution<T>> => {
+      if (!key || typeof key !== 'string' || key.length <= 3) {
+        throw new Error(`The key used for idempotency must be a string with len>3. key='${key}'`);
+      }
+
       let dbKey = key;
 
       if (config1.keyHash) {
