@@ -1,5 +1,7 @@
 # idempotender
 
+[![npm](https://img.shields.io/npm/v/@idempotender/core)](https://www.npmjs.com/package/@idempotender/core)
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fflaviostutz%2Fidempotender?ref=badge_shield)
 
 JS lib for helping creating idempotent functions by storing states in DynamoDB.
